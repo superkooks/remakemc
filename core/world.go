@@ -31,27 +31,17 @@ func (d *Dimension) GetChunkContaining(pos Vec3) *Chunk {
 }
 
 func (d *Dimension) GetBlockAt(pos Vec3) Block {
-	g := func(i int) int {
-		if i < 0 {
-			return i/16 - 1
-		}
-		return i / 16
-	}
+	chk := d.Chunks[NewVec3(
+		FlooredDivision(pos.X, 16),
+		FlooredDivision(pos.Y, 16),
+		FlooredDivision(pos.Z, 16),
+	)]
 
-	chk := d.Chunks[NewVec3(g(pos.X), g(pos.Y), g(pos.Z))]
 	if chk == nil {
 		return Block{}
 	}
 
-	f := func(i int) int {
-		j := i % 16
-		if j < 0 {
-			j += 16
-		}
-		return j
-	}
-
-	return chk.Blocks[f(pos.X)][f(pos.Y)][f(pos.Z)]
+	return chk.Blocks[FlooredRemainder(pos.X, 16)][FlooredRemainder(pos.Y, 16)][FlooredRemainder(pos.Z, 16)]
 }
 
 type World struct {

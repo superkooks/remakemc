@@ -97,6 +97,8 @@ void main() {
 func RenderChunk(c *core.Chunk, view mgl32.Mat4, aspectRatio float32) {
 	gl.UseProgram(chunkProg)
 	gl.Enable(gl.CULL_FACE)
+	gl.Enable(gl.DEPTH_TEST)
+	gl.DepthFunc(gl.LESS)
 
 	// Blend transparency
 	// gl.Enable(gl.BLEND)

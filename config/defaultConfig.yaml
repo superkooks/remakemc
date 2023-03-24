@@ -1,0 +1,11 @@
+{
+    # Disables the client, and starts only the server
+    # The server will be made available on the specified port
+    "publicserver": false,
+
+    "client": {
+        # The width & height the game window starts at
+        "defaultwidth": 1920,
+        "defaultheight": 1080
+    }
+}

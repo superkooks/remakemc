@@ -1,0 +1,22 @@
+https://www.reddit.com/r/CompetitiveMinecraft/comments/8oafe0/can_someone_explain_lag_compensation_if_there_is/
+
+LOD generation for minecraft explanation.
+(Dynamic Octree) LOD that wraps around a sphere (earth-like).
+Otherwise, it is still obvious where the world stops.
+https://www.minecraftforum.net/forums/minecraft-java-edition/suggestions/2996005-dynamic-lod-more-chunks-at-a-lower-price
+
+https://www.gamedeveloper.com/programming/practical-texture-atlases
+Can't use texture arrays. Max size of array can only be 2048 = only 344 blocks possible.
+Have to use texture atlasing.
+For GUI however, we can just rebind the texture
+Still not sure if entities get their own atlas or not.
+
+Use a single VBO for each chunk.
+
+Use cubic chunks (although limited height)
+
+Crosshair has colour inversion in Minecraft.
+Not sure how that works exactly.
+Obviously you can do it in a fragment shader, reading from a framebuffer texture.
+
+GUI scaling can be achieved by scaling all points not along the border by a single factor

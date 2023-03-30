@@ -8,9 +8,9 @@ import (
 )
 
 var chunkProg uint32
-var pUniform int32
-var vUniform int32
-var mUniform int32
+var chunkPUniform int32
+var chunkVUniform int32
+var chunkMUniform int32
 
 func initChunk() {
 	// Compile shaders
@@ -89,12 +89,12 @@ void main() {
 	gl.AttachShader(chunkProg, guiFrag)
 	gl.LinkProgram(chunkProg)
 
-	pUniform = gl.GetUniformLocation(chunkProg, gl.Str("projection\x00"))
-	vUniform = gl.GetUniformLocation(chunkProg, gl.Str("view\x00"))
-	mUniform = gl.GetUniformLocation(chunkProg, gl.Str("model\x00"))
+	chunkPUniform = gl.GetUniformLocation(chunkProg, gl.Str("projection\x00"))
+	chunkVUniform = gl.GetUniformLocation(chunkProg, gl.Str("view\x00"))
+	chunkMUniform = gl.GetUniformLocation(chunkProg, gl.Str("model\x00"))
 }
 
-func RenderChunk(c *core.Chunk, view mgl32.Mat4, aspectRatio float32) {
+func RenderChunk(c *core.Chunk, view mgl32.Mat4) {
 	gl.UseProgram(chunkProg)
 	gl.Enable(gl.CULL_FACE)
 	gl.Enable(gl.DEPTH_TEST)
@@ -105,14 +105,14 @@ func RenderChunk(c *core.Chunk, view mgl32.Mat4, aspectRatio float32) {
 	// gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
 	// Assign view & projection mats
-	projection := mgl32.Perspective(mgl32.DegToRad(float32(70)), aspectRatio, 0.1, 300.0)
-	gl.UniformMatrix4fv(pUniform, 1, false, &projection[0])
-	gl.UniformMatrix4fv(vUniform, 1, false, &view[0])
+	projection := mgl32.Perspective(mgl32.DegToRad(FOVDegrees), GetAspectRatio(), 0.1, 300.0)
+	gl.UniformMatrix4fv(chunkPUniform, 1, false, &projection[0])
+	gl.UniformMatrix4fv(chunkVUniform, 1, false, &view[0])
 
 	// Translate chunk into position
 	p := c.Position.ToFloat()
 	model := mgl32.Translate3D(p[0], p[1], p[2])
-	gl.UniformMatrix4fv(mUniform, 1, false, &model[0])
+	gl.UniformMatrix4fv(chunkMUniform, 1, false, &model[0])
 
 	// Draw
 	gl.EnableVertexAttribArray(0)

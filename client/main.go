@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"math/rand"
 	"remakemc/client/gui"
 	"remakemc/client/renderers"
 	"remakemc/config"
@@ -29,7 +30,7 @@ func Start() {
 	fmt.Println(dim.Chunks)
 
 	// Initialize player
-	player := &Player{Speed: 10}
+	player := &Player{Speed: 10, Position: mgl32.Vec3{2, 2, -2}}
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
 
 	// Game loop
@@ -54,8 +55,18 @@ func Start() {
 		)
 
 		// Render terrain
-		winX, winY := renderers.Win.GetSize()
-		renderers.RenderChunk(dim.Chunks[core.Vec3{}], view, float32(winX)/float32(winY))
+		renderers.RenderChunk(dim.Chunks[core.Vec3{}], view)
+
+		// Find selector position and render
+		core.TraceRay(player.LookVec(), player.Position, 16, func(v mgl32.Vec3) (stop bool) {
+			block := dim.GetBlockAt(core.NewVec3FromFloat(v))
+			if block.Type != nil {
+				renderers.RenderSelector(block.Position.ToFloat(), view)
+				return true
+			} else {
+				return false
+			}
+		})
 
 		// Render gui
 		gui.RenderGame()
@@ -83,6 +94,14 @@ func oneChunkDim(typ *core.BlockType) *core.Dimension {
 			b = append(b, a)
 		}
 		chk.Blocks = append(chk.Blocks, b)
+	}
+
+	for x := 0; x < 16; x++ {
+		for z := 0; z < 16; z++ {
+			for y := 0; y < int(rand.Float32()*6); y++ {
+				chk.Blocks[x][15-y][z].Type = nil
+			}
+		}
 	}
 
 	dim.Chunks[core.NewVec3(0, 0, 0)] = chk

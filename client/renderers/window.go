@@ -8,6 +8,7 @@ import (
 )
 
 var Win *glfw.Window
+var FOVDegrees float32 = 70
 
 func InitAll(width, height int) {
 	// Init GLFW window
@@ -23,6 +24,12 @@ func InitAll(width, height int) {
 	// Init renderers
 	initGUI()
 	initChunk()
+	initSelector()
+}
+
+func GetAspectRatio() float32 {
+	winX, winY := Win.GetSize()
+	return float32(winX) / float32(winY)
 }
 
 func initGlfw(width, height int) *glfw.Window {

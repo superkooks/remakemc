@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"math/rand"
 	"remakemc/client/gui"
 	"remakemc/client/renderers"
@@ -27,11 +26,14 @@ func Start() {
 
 	// Initialize terrain
 	dim := oneChunkDim(&blocks.Grass)
-	fmt.Println(dim.Chunks)
 
 	// Initialize player
 	player := &Player{Speed: 10, Position: mgl32.Vec3{2, 2, -2}}
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
+
+	// Initialize inputs
+	mouseOne := new(core.Debounced)
+	mouseTwo := new(core.Debounced)
 
 	// Game loop
 	previousTime := glfw.GetTime()
@@ -46,7 +48,7 @@ func Start() {
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 		// Process user input and recalculate view matrix
-		player.ProcessMouse(deltaTime)
+		player.ProcessMousePosition(deltaTime)
 		player.ProcessKeyboard(deltaTime)
 		view := mgl32.LookAtV(
 			player.Position,                       // Camera is at ... in World Space
@@ -54,11 +56,68 @@ func Start() {
 			mgl32.Vec3{0, 1, 0},                   // Head is up
 		)
 
+		// Mining
+		if renderers.Win.GetMouseButton(glfw.MouseButton1) == glfw.Press && mouseOne.Invoke() {
+			core.TraceRay(player.LookVec(), player.Position, 16, func(v, _ mgl32.Vec3) (stop bool) {
+				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
+				if block.Type != nil {
+					block.Type = nil
+					dim.SetBlockAt(block)
+					renderers.UpdateRequiredMeshes(dim, block.Position)
+					return true
+				} else {
+					return false
+				}
+			})
+		} else if renderers.Win.GetMouseButton(glfw.MouseButton1) == glfw.Release {
+			mouseOne.Reset()
+		}
+
+		// Placing
+		if renderers.Win.GetMouseButton(glfw.MouseButton2) == glfw.Press && mouseTwo.Invoke() {
+			core.TraceRay(player.LookVec(), player.Position, 16, func(v, h mgl32.Vec3) (stop bool) {
+				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
+				if block.Type != nil {
+					placePos := core.Vec3{
+						X: block.Position.X,
+						Y: block.Position.Y,
+						Z: block.Position.Z,
+					}
+
+					switch core.FaceFromSubvoxel(h) {
+					case core.FaceTop:
+						placePos = placePos.Add(core.Vec3{Y: 1})
+					case core.FaceBottom:
+						placePos = placePos.Add(core.Vec3{Y: -1})
+					case core.FaceLeft:
+						placePos = placePos.Add(core.Vec3{X: -1})
+					case core.FaceRight:
+						placePos = placePos.Add(core.Vec3{X: 1})
+					case core.FaceFront:
+						placePos = placePos.Add(core.Vec3{Z: 1})
+					case core.FaceBack:
+						placePos = placePos.Add(core.Vec3{Z: -1})
+					}
+
+					dim.SetBlockAt(core.Block{
+						Position: placePos,
+						Type:     &blocks.Grass,
+					})
+					renderers.UpdateRequiredMeshes(dim, block.Position)
+					return true
+				} else {
+					return false
+				}
+			})
+		} else if renderers.Win.GetMouseButton(glfw.MouseButton2) == glfw.Release {
+			mouseTwo.Reset()
+		}
+
 		// Render terrain
 		renderers.RenderChunk(dim.Chunks[core.Vec3{}], view)
 
 		// Find selector position and render
-		core.TraceRay(player.LookVec(), player.Position, 16, func(v mgl32.Vec3) (stop bool) {
+		core.TraceRay(player.LookVec(), player.Position, 16, func(v, _ mgl32.Vec3) (stop bool) {
 			block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 			if block.Type != nil {
 				renderers.RenderSelector(block.Position.ToFloat(), view)

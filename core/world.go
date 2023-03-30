@@ -10,6 +10,17 @@ type Chunk struct {
 	VAO  uint32
 }
 
+type BlockFace int
+
+const (
+	FaceTop BlockFace = iota
+	FaceBottom
+	FaceLeft
+	FaceRight
+	FaceFront
+	FaceBack
+)
+
 type Block struct {
 	Position Vec3
 	Data     interface{}
@@ -42,6 +53,19 @@ func (d *Dimension) GetBlockAt(pos Vec3) Block {
 	}
 
 	return chk.Blocks[FlooredRemainder(pos.X, 16)][FlooredRemainder(pos.Y, 16)][FlooredRemainder(pos.Z, 16)]
+}
+
+func (d *Dimension) SetBlockAt(b Block) {
+	chk := d.Chunks[NewVec3(
+		FlooredDivision(b.Position.X, 16),
+		FlooredDivision(b.Position.Y, 16),
+		FlooredDivision(b.Position.Z, 16),
+	)]
+
+	x := FlooredRemainder(b.Position.X, 16)
+	y := FlooredRemainder(b.Position.Y, 16)
+	z := FlooredRemainder(b.Position.Z, 16)
+	chk.Blocks[x][y][z] = b
 }
 
 type World struct {

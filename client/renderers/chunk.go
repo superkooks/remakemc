@@ -139,6 +139,52 @@ func MakeChunkVAO(d *core.Dimension, chunk *core.Chunk) {
 	chunk.VAO = vao
 }
 
+func UpdateRequiredMeshes(dim *core.Dimension, updatePos core.Vec3) {
+	MakeChunkVAO(dim, dim.GetChunkContaining(updatePos))
+
+	// X
+	if core.FlooredRemainder(updatePos.X, 16) == 15 {
+		chk := dim.GetChunkContaining(updatePos.Add(core.Vec3{X: 1}))
+		if chk != nil {
+			MakeChunkVAO(dim, chk)
+		}
+	}
+	if core.FlooredRemainder(updatePos.X, 16) == 0 {
+		chk := dim.GetChunkContaining(updatePos.Add(core.Vec3{X: -1}))
+		if chk != nil {
+			MakeChunkVAO(dim, chk)
+		}
+	}
+
+	// Y
+	if core.FlooredRemainder(updatePos.Y, 16) == 15 {
+		chk := dim.GetChunkContaining(updatePos.Add(core.Vec3{Y: 1}))
+		if chk != nil {
+			MakeChunkVAO(dim, chk)
+		}
+	}
+	if core.FlooredRemainder(updatePos.Y, 16) == 0 {
+		chk := dim.GetChunkContaining(updatePos.Add(core.Vec3{Y: -1}))
+		if chk != nil {
+			MakeChunkVAO(dim, chk)
+		}
+	}
+
+	// Z
+	if core.FlooredRemainder(updatePos.Z, 16) == 15 {
+		chk := dim.GetChunkContaining(updatePos.Add(core.Vec3{Z: 1}))
+		if chk != nil {
+			MakeChunkVAO(dim, chk)
+		}
+	}
+	if core.FlooredRemainder(updatePos.Z, 16) == 0 {
+		chk := dim.GetChunkContaining(updatePos.Add(core.Vec3{Z: -1}))
+		if chk != nil {
+			MakeChunkVAO(dim, chk)
+		}
+	}
+}
+
 func MakeChunkMesh(d *core.Dimension, chunkPos core.Vec3) (verts, normals []float32) {
 	for x := 0; x < 16; x++ {
 		for y := 0; y < 16; y++ {

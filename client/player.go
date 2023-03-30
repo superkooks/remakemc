@@ -76,7 +76,7 @@ func (p *Player) ProcessKeyboard(deltaT float64) {
 }
 
 // Process the mouse input for this frame
-func (p *Player) ProcessMouse(deltaT float64) {
+func (p *Player) ProcessMousePosition(deltaT float64) {
 	// Get and reset cursor position
 	xpos, ypos := renderers.Win.GetCursorPos()
 	width, height := renderers.Win.GetSize()

@@ -62,6 +62,10 @@ func (d *Dimension) SetBlockAt(b Block) {
 		FlooredDivision(b.Position.Z, 16),
 	)]
 
+	if chk == nil {
+		return
+	}
+
 	x := FlooredRemainder(b.Position.X, 16)
 	y := FlooredRemainder(b.Position.Y, 16)
 	z := FlooredRemainder(b.Position.Z, 16)

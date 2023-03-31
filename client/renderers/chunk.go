@@ -11,6 +11,8 @@ var chunkProg uint32
 var chunkPUniform int32
 var chunkVUniform int32
 var chunkMUniform int32
+var chunkTUniform int32
+var chunkTex uint32
 
 func initChunk() {
 	// Compile shaders
@@ -23,9 +25,11 @@ uniform mat4 model;
 
 layout (location = 0) in vec3 vp;
 layout (location = 1) in vec3 vertexNormal;
+layout (location = 2) in vec2 vertexUV;
 
 out vec3 fragNormal;
 out vec3 fragVertex;
+out vec2 fragUV;
 out mat4 fragModel;
 
 void main() {
@@ -33,6 +37,7 @@ void main() {
 
 	fragVertex = vp;
 	fragNormal = vertexNormal;
+	fragUV = vertexUV;
 	fragModel = model;
 }`+"\x00", gl.VERTEX_SHADER)
 	if err != nil {
@@ -43,9 +48,11 @@ void main() {
 #version 410
 
 uniform vec3 cameraPosition;
+uniform sampler2D fragTexture;
 
 in vec3 fragNormal;
 in vec3 fragVertex;
+in vec2 fragUV;
 in mat4 fragModel;
 
 out vec4 color;
@@ -69,8 +76,7 @@ vec3 ApplyLight(vec3 surfaceColor, vec3 normal, vec3 surfacePos, vec3 surfaceToC
 void main() {
 	vec3 normal = normalize(transpose(inverse(mat3(fragModel))) * fragNormal);
     vec3 surfacePos = vec3((fragModel * vec4(fragVertex, 1)).xyz);
-    // vec4 surfaceColor = texture(fragmentTexture, UV);
-	vec4 surfaceColor = vec4(1.0);
+	vec4 surfaceColor = texture(fragTexture, fragUV);
     vec3 surfaceToCamera = normalize(cameraPosition - surfacePos);
 
     // Combine color from all the lights
@@ -92,6 +98,23 @@ void main() {
 	chunkPUniform = gl.GetUniformLocation(chunkProg, gl.Str("projection\x00"))
 	chunkVUniform = gl.GetUniformLocation(chunkProg, gl.Str("view\x00"))
 	chunkMUniform = gl.GetUniformLocation(chunkProg, gl.Str("model\x00"))
+	chunkTUniform = gl.GetUniformLocation(chunkProg, gl.Str("fragTexture\x00"))
+
+	// Load texture atlas and create texture
+	i := BlockAtlas.Finalize()
+	gl.GenTextures(1, &chunkTex)
+	gl.BindTexture(gl.TEXTURE_2D, chunkTex)
+
+	// Nearest when magnifying, linear when minifying
+	gl.TexParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+	gl.TexParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+
+	gl.TexParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+	gl.TexParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+
+	// Send texture to GPU
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, int32(i.Rect.Dx()), int32(i.Rect.Dy()), 0, gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(i.Pix))
+	gl.GenerateMipmap(gl.TEXTURE_2D)
 }
 
 func RenderChunk(c *core.Chunk, view mgl32.Mat4) {
@@ -114,8 +137,12 @@ func RenderChunk(c *core.Chunk, view mgl32.Mat4) {
 	model := mgl32.Translate3D(p[0], p[1], p[2])
 	gl.UniformMatrix4fv(chunkMUniform, 1, false, &model[0])
 
+	// Activate texture atlas
+	gl.ActiveTexture(gl.TEXTURE0)
+	gl.BindTexture(gl.TEXTURE_2D, chunkTex)
+	gl.Uniform1i(chunkTUniform, int32(chunkTex-1))
+
 	// Draw
-	gl.EnableVertexAttribArray(0)
 	gl.BindVertexArray(c.VAO)
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(c.Mesh)))
 }
@@ -125,8 +152,8 @@ func MakeChunkVAO(d *core.Dimension, chunk *core.Chunk) {
 	gl.GenVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
 
-	var normals []float32
-	chunk.Mesh, normals = MakeChunkMesh(d, chunk.Position)
+	var normals, uvs []float32
+	chunk.Mesh, normals, uvs = MakeChunkMesh(d, chunk.Position)
 
 	gl.EnableVertexAttribArray(0)
 	gl.BindBuffer(gl.ARRAY_BUFFER, GlBufferFrom(chunk.Mesh))
@@ -135,6 +162,10 @@ func MakeChunkVAO(d *core.Dimension, chunk *core.Chunk) {
 	gl.EnableVertexAttribArray(1)
 	gl.BindBuffer(gl.ARRAY_BUFFER, GlBufferFrom(normals))
 	gl.VertexAttribPointer(1, 3, gl.FLOAT, false, 0, nil) // vec3
+
+	gl.EnableVertexAttribArray(2)
+	gl.BindBuffer(gl.ARRAY_BUFFER, GlBufferFrom(uvs))
+	gl.VertexAttribPointer(2, 2, gl.FLOAT, false, 0, nil) // vec2
 
 	chunk.VAO = vao
 }
@@ -185,7 +216,7 @@ func UpdateRequiredMeshes(dim *core.Dimension, updatePos core.Vec3) {
 	}
 }
 
-func MakeChunkMesh(d *core.Dimension, chunkPos core.Vec3) (verts, normals []float32) {
+func MakeChunkMesh(d *core.Dimension, chunkPos core.Vec3) (verts, normals, uvs []float32) {
 	for x := 0; x < 16; x++ {
 		for y := 0; y < 16; y++ {
 			for z := 0; z < 16; z++ {
@@ -197,198 +228,61 @@ func MakeChunkMesh(d *core.Dimension, chunkPos core.Vec3) (verts, normals []floa
 				}
 
 				// Top
-				if d.GetBlockAt(global.Add(core.Vec3{Y: 1})).Type == nil {
-					newVert := makeFace(topFace, local.ToFloat())
-					verts = append(verts, newVert...)
-					normals = append(normals, makeNormals(newVert)...)
+				top := d.GetBlockAt(global.Add(core.Vec3{Y: 1}))
+				if top.Type == nil || top.Type.Transparent {
+					v, n, u := b.Type.RenderType.RenderFace(core.FaceTop, local.ToFloat())
+					verts = append(verts, v...)
+					normals = append(normals, n...)
+					uvs = append(uvs, u...)
 				}
 
 				// Bottom
-				if d.GetBlockAt(global.Add(core.Vec3{Y: -1})).Type == nil {
-					newVert := makeFace(bottomFace, local.ToFloat())
-					verts = append(verts, newVert...)
-					normals = append(normals, makeNormals(newVert)...)
+				bottom := d.GetBlockAt(global.Add(core.Vec3{Y: -1}))
+				if bottom.Type == nil || bottom.Type.Transparent {
+					v, n, u := b.Type.RenderType.RenderFace(core.FaceBottom, local.ToFloat())
+					verts = append(verts, v...)
+					normals = append(normals, n...)
+					uvs = append(uvs, u...)
 				}
 
 				// Left
-				if d.GetBlockAt(global.Add(core.Vec3{X: -1})).Type == nil {
-					newVert := makeFace(leftFace, local.ToFloat())
-					verts = append(verts, newVert...)
-					normals = append(normals, makeNormals(newVert)...)
+				left := d.GetBlockAt(global.Add(core.Vec3{X: -1}))
+				if left.Type == nil || left.Type.Transparent {
+					v, n, u := b.Type.RenderType.RenderFace(core.FaceLeft, local.ToFloat())
+					verts = append(verts, v...)
+					normals = append(normals, n...)
+					uvs = append(uvs, u...)
 				}
 
 				// Right
-				if d.GetBlockAt(global.Add(core.Vec3{X: 1})).Type == nil {
-					newVert := makeFace(rightFace, local.ToFloat())
-					verts = append(verts, newVert...)
-					normals = append(normals, makeNormals(newVert)...)
+				right := d.GetBlockAt(global.Add(core.Vec3{X: 1}))
+				if right.Type == nil || right.Type.Transparent {
+					v, n, u := b.Type.RenderType.RenderFace(core.FaceRight, local.ToFloat())
+					verts = append(verts, v...)
+					normals = append(normals, n...)
+					uvs = append(uvs, u...)
 				}
 
 				// Front
-				if d.GetBlockAt(global.Add(core.Vec3{Z: 1})).Type == nil {
-					newVert := makeFace(frontFace, local.ToFloat())
-					verts = append(verts, newVert...)
-					normals = append(normals, makeNormals(newVert)...)
+				front := d.GetBlockAt(global.Add(core.Vec3{Z: 1}))
+				if front.Type == nil || front.Type.Transparent {
+					v, n, u := b.Type.RenderType.RenderFace(core.FaceFront, local.ToFloat())
+					verts = append(verts, v...)
+					normals = append(normals, n...)
+					uvs = append(uvs, u...)
 				}
 
 				// Back
-				if d.GetBlockAt(global.Add(core.Vec3{Z: -1})).Type == nil {
-					newVert := makeFace(backFace, local.ToFloat())
-					verts = append(verts, newVert...)
-					normals = append(normals, makeNormals(newVert)...)
+				back := d.GetBlockAt(global.Add(core.Vec3{Z: -1}))
+				if back.Type == nil || back.Type.Transparent {
+					v, n, u := b.Type.RenderType.RenderFace(core.FaceBack, local.ToFloat())
+					verts = append(verts, v...)
+					normals = append(normals, n...)
+					uvs = append(uvs, u...)
 				}
 			}
 		}
 	}
 
 	return
-}
-
-func makeFace(face []float32, pos mgl32.Vec3) []float32 {
-	newV := make([]float32, 3*6)
-	copy(newV, face)
-	for i := 0; i < 6; i++ {
-		newV[i*3] += pos.X()
-		newV[i*3+1] += pos.Y()
-		newV[i*3+2] += pos.Z()
-	}
-
-	return newV
-}
-
-func makeNormals(newV []float32) []float32 {
-	normals := make([]float32, 18)
-	for i := 0; i < 2; i++ {
-		vecV := mgl32.Vec3{newV[3+i*9] - newV[0+i*9], newV[4+i*9] - newV[1+i*9], newV[5+i*9] - newV[2+i*9]}
-		vecW := mgl32.Vec3{newV[6+i*9] - newV[0+i*9], newV[7+i*9] - newV[1+i*9], newV[8+i*9] - newV[2+i*9]}
-		n := [3]float32(vecV.Cross(vecW))
-
-		copy(normals[0+i*9:], n[:])
-		copy(normals[3+i*9:], n[:])
-		copy(normals[6+i*9:], n[:])
-	}
-
-	return normals
-}
-
-// Vertices for faces
-var topFace = []float32{
-	0, 1, 0,
-	0, 1, 1,
-	1, 1, 0,
-
-	1, 1, 0,
-	0, 1, 1,
-	1, 1, 1,
-}
-
-var bottomFace = []float32{
-	0, 0, 0,
-	1, 0, 0,
-	0, 0, 1,
-
-	1, 0, 0,
-	1, 0, 1,
-	0, 0, 1,
-}
-
-var leftFace = []float32{
-	0, 0, 1,
-	0, 1, 0,
-	0, 0, 0,
-
-	0, 0, 1,
-	0, 1, 1,
-	0, 1, 0,
-}
-
-var rightFace = []float32{
-	1, 0, 1,
-	1, 0, 0,
-	1, 1, 0,
-
-	1, 0, 1,
-	1, 1, 0,
-	1, 1, 1,
-}
-
-var frontFace = []float32{
-	0, 0, 1,
-	1, 0, 1,
-	0, 1, 1,
-
-	1, 0, 1,
-	1, 1, 1,
-	0, 1, 1,
-}
-
-var backFace = []float32{
-	0, 0, 0,
-	0, 1, 0,
-	1, 0, 0,
-
-	1, 0, 0,
-	0, 1, 0,
-	1, 1, 0,
-}
-
-// UV maps for faces
-var topFaceUV = []float32{
-	0, 0, 9,
-	0, 1, 9,
-	1, 0, 9,
-
-	1, 0, 9,
-	0, 1, 9,
-	1, 1, 9,
-}
-
-var bottomFaceUV = []float32{
-	0, 0, 9,
-	1, 0, 9,
-	0, 1, 9,
-
-	1, 0, 9,
-	1, 1, 9,
-	0, 1, 9,
-}
-
-var leftFaceUV = []float32{
-	0, 1, 9,
-	1, 0, 9,
-	0, 0, 9,
-
-	0, 1, 9,
-	1, 1, 9,
-	1, 0, 9,
-}
-
-var rightFaceUV = []float32{
-	1, 1, 9,
-	1, 0, 9,
-	0, 0, 9,
-
-	1, 1, 9,
-	0, 0, 9,
-	0, 1, 9,
-}
-
-var frontFaceUV = []float32{
-	1, 0, 9,
-	0, 0, 9,
-	1, 1, 9,
-
-	0, 0, 9,
-	0, 1, 9,
-	1, 1, 9,
-}
-
-var backFaceUV = []float32{
-	0, 0, 9,
-	0, 1, 9,
-	1, 0, 9,
-
-	1, 0, 9,
-	0, 1, 9,
-	1, 1, 9,
 }

@@ -1,5 +1,10 @@
 package blocks
 
-import "remakemc/core"
+import (
+	"remakemc/client/renderers"
+	"remakemc/core"
+)
 
-var Grass = core.BlockType{}
+var Grass = core.BlockType{
+	RenderType: renderers.BasicOneTex("grass"),
+}

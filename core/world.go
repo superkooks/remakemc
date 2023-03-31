@@ -1,5 +1,7 @@
 package core
 
+import "github.com/go-gl/mathgl/mgl32"
+
 // A Chunk is a 16x16x16 group of blocks
 type Chunk struct {
 	Position Vec3
@@ -28,7 +30,21 @@ type Block struct {
 }
 
 type BlockType struct {
-	RenderFunc func()
+	// If the block is transparent, then faces of another block that overlap
+	// with the faces of this block will still be rendered anyway.
+	//
+	// This value should be true if the player can see through the block in
+	// any way, or if the block does not take up the full area.
+	Transparent bool
+	RenderType  RenderType
+}
+
+type RenderType struct {
+	Init func()
+
+	// RenderFace should returns the data used for rendering, with the vertices
+	// returned in block space. i.e. from (0,0,0) to (1,1,1)
+	RenderFace func(face BlockFace, pos mgl32.Vec3) (verts []float32, normals []float32, uvs []float32)
 }
 
 type Dimension struct {

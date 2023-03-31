@@ -17,6 +17,9 @@ import (
 func Start() {
 	runtime.LockOSThread()
 
+	// Initialize texture atlas
+	blocks.Grass.RenderType.Init()
+
 	// Initialize OpenGL and GLFW
 	renderers.InitAll(config.App.Client.DefaultWidth, config.App.Client.DefaultHeight)
 	defer glfw.Terminate()

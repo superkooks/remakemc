@@ -19,6 +19,9 @@ func Start() {
 
 	// Initialize texture atlas
 	blocks.Grass.RenderType.Init()
+	blocks.Dirt.RenderType.Init()
+	blocks.Stone.RenderType.Init()
+	blocks.Cobblestone.RenderType.Init()
 
 	// Initialize OpenGL and GLFW
 	renderers.InitAll(config.App.Client.DefaultWidth, config.App.Client.DefaultHeight)
@@ -104,7 +107,7 @@ func Start() {
 
 					dim.SetBlockAt(core.Block{
 						Position: placePos,
-						Type:     &blocks.Grass,
+						Type:     &blocks.Cobblestone,
 					})
 					renderers.UpdateRequiredMeshes(dim, block.Position)
 					return true

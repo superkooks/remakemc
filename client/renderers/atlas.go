@@ -14,8 +14,11 @@ import (
 var BlockAtlas = NewAtlas()
 
 type Atlas struct {
+	// The side width of the atlas
+	Width int
+
 	// The side width of the largest texture
-	LargestTexSide int
+	largestTexSide int
 
 	textures map[string]*image.RGBA
 	uvs      map[string]mgl32.Vec4
@@ -34,8 +37,8 @@ func (a *Atlas) AddTex(i *image.RGBA, name string) {
 		panic("textures in atlas must have an aspect ratio of 1")
 	}
 
-	if a.LargestTexSide < i.Rect.Dx() {
-		a.LargestTexSide = i.Rect.Dx()
+	if a.largestTexSide < i.Rect.Dx() {
+		a.largestTexSide = i.Rect.Dx()
 	}
 
 	a.textures[name] = i
@@ -62,24 +65,25 @@ func (a *Atlas) AddTexFromAssets(texname string) {
 // Finalize the atlas, rendering all textures onto one image
 func (a *Atlas) Finalize() *image.RGBA {
 	count := len(a.textures)
-	atlasWidth := int(math.Ceil(math.Sqrt(float64(count)))) * a.LargestTexSide
+	atlasWidth := int(math.Ceil(math.Sqrt(float64(count)))) * a.largestTexSide
+	a.Width = atlasWidth
 
 	i := image.NewRGBA(image.Rect(0, 0, atlasWidth, atlasWidth))
 
 	j := 0
 	for k, v := range a.textures {
-		x := (j * a.LargestTexSide) % atlasWidth
-		y := (j * a.LargestTexSide) / atlasWidth * a.LargestTexSide
+		x := (j * a.largestTexSide) % atlasWidth
+		y := (j * a.largestTexSide) / atlasWidth * a.largestTexSide
 
 		fmt.Println(k, x, y)
 
-		draw.Draw(i, image.Rect(x, y, x+a.LargestTexSide, y+a.LargestTexSide), v, image.Pt(0, 0), draw.Over)
+		draw.Draw(i, image.Rect(x, y, x+a.largestTexSide, y+a.largestTexSide), v, image.Pt(0, 0), draw.Over)
 
 		a.uvs[k] = mgl32.Vec4{
 			float32(x) / float32(i.Rect.Dx()),
 			float32(y) / float32(i.Rect.Dy()),
-			float32(x+a.LargestTexSide) / float32(i.Rect.Dx()),
-			float32(y+a.LargestTexSide) / float32(i.Rect.Dy()),
+			float32(x+a.largestTexSide) / float32(i.Rect.Dx()),
+			float32(y+a.largestTexSide) / float32(i.Rect.Dy()),
 		}
 
 		j++
@@ -91,5 +95,11 @@ func (a *Atlas) Finalize() *image.RGBA {
 // MUST be called after the atlas is finalized
 func (a *Atlas) GetUV(name string) (start, end mgl32.Vec2) {
 	v := a.uvs[name]
+	// Correct uvs so they align on the centre of a texel
+	v[0] += (1 / float32(a.Width)) / 2
+	v[1] += (1 / float32(a.Width)) / 2
+	v[2] -= (1 / float32(a.Width)) / 2
+	v[3] -= (1 / float32(a.Width)) / 2
+
 	return mgl32.Vec2{v[0], v[1]}, mgl32.Vec2{v[2], v[3]}
 }

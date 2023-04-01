@@ -118,14 +118,18 @@ void main() {
 }
 
 func RenderChunk(c *core.Chunk, view mgl32.Mat4) {
+	if len(c.Mesh) == 0 {
+		return
+	}
+
 	gl.UseProgram(chunkProg)
 	gl.Enable(gl.CULL_FACE)
 	gl.Enable(gl.DEPTH_TEST)
 	gl.DepthFunc(gl.LESS)
 
 	// Blend transparency
-	// gl.Enable(gl.BLEND)
-	// gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+	gl.Enable(gl.BLEND)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
 	// Assign view & projection mats
 	projection := mgl32.Perspective(mgl32.DegToRad(FOVDegrees), GetAspectRatio(), 0.1, 300.0)
@@ -154,6 +158,10 @@ func MakeChunkVAO(d *core.Dimension, chunk *core.Chunk) {
 
 	var normals, uvs []float32
 	chunk.Mesh, normals, uvs = MakeChunkMesh(d, chunk.Position)
+
+	if len(chunk.Mesh) == 0 {
+		return
+	}
 
 	gl.EnableVertexAttribArray(0)
 	gl.BindBuffer(gl.ARRAY_BUFFER, GlBufferFrom(chunk.Mesh))

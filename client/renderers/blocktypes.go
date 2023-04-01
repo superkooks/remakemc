@@ -6,22 +6,22 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 )
 
-func BasicOneTex(tex string) core.RenderType {
-	return core.RenderType{
-		Init: func() {
-			BlockAtlas.AddTexFromAssets(tex)
-		},
+type BasicOneTex struct {
+	Tex string
+}
 
-		RenderFace: func(face core.BlockFace, pos mgl32.Vec3) (verts []float32, normals []float32, uvs []float32) {
-			atlasStart, atlasEnd := BlockAtlas.GetUV(tex)
+func (t BasicOneTex) Init() {
+	BlockAtlas.AddTexFromAssets(t.Tex)
+}
 
-			verts = makeFace(faceVertices[face], pos)
-			normals = makeNormals(verts)
-			uvs = makeUVs(faceUVs[face], atlasStart, atlasEnd)
+func (t BasicOneTex) RenderFace(face core.BlockFace, pos mgl32.Vec3) (verts []float32, normals []float32, uvs []float32) {
+	atlasStart, atlasEnd := BlockAtlas.GetUV(t.Tex)
 
-			return
-		},
-	}
+	verts = makeFace(faceVertices[face], pos)
+	normals = makeNormals(verts)
+	uvs = makeUVs(faceUVs[face], atlasStart, atlasEnd)
+
+	return
 }
 
 // Add a position to a face

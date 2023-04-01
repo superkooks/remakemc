@@ -1,7 +1,6 @@
 package client
 
 import (
-	"math/rand"
 	"remakemc/client/gui"
 	"remakemc/client/renderers"
 	"remakemc/config"
@@ -31,7 +30,17 @@ func Start() {
 	gui.Init()
 
 	// Initialize terrain
-	dim := oneChunkDim(&blocks.Grass)
+	dim := &core.Dimension{
+		Chunks: make(map[core.Vec3]*core.Chunk),
+	}
+	for x := 0; x < 256; x += 16 {
+		for z := 0; z < 256; z += 16 {
+			GenTerrainColumn(core.NewVec3(x, 0, z), dim)
+		}
+	}
+	for _, v := range dim.Chunks {
+		renderers.MakeChunkVAO(dim, v)
+	}
 
 	// Initialize player
 	player := &Player{Speed: 10, Position: mgl32.Vec3{2, 2, -2}}
@@ -107,7 +116,7 @@ func Start() {
 
 					dim.SetBlockAt(core.Block{
 						Position: placePos,
-						Type:     &blocks.Cobblestone,
+						Type:     blocks.Cobblestone,
 					})
 					renderers.UpdateRequiredMeshes(dim, block.Position)
 					return true
@@ -120,7 +129,9 @@ func Start() {
 		}
 
 		// Render terrain
-		renderers.RenderChunk(dim.Chunks[core.Vec3{}], view)
+		for _, v := range dim.Chunks {
+			renderers.RenderChunk(v, view)
+		}
 
 		// Find selector position and render
 		core.TraceRay(player.LookVec(), player.Position, 16, func(v, _ mgl32.Vec3) (stop bool) {
@@ -140,38 +151,4 @@ func Start() {
 		glfw.PollEvents()
 		renderers.Win.SwapBuffers()
 	}
-}
-
-func oneChunkDim(typ *core.BlockType) *core.Dimension {
-	dim := &core.Dimension{
-		Chunks: make(map[core.Vec3]*core.Chunk),
-	}
-
-	chk := new(core.Chunk)
-	for x := 0; x < 16; x++ {
-		var b [][]core.Block
-		for y := 0; y < 16; y++ {
-			var a []core.Block
-			for z := 0; z < 16; z++ {
-				a = append(a, core.Block{Position: core.NewVec3(x, y, z), Type: typ})
-			}
-
-			b = append(b, a)
-		}
-		chk.Blocks = append(chk.Blocks, b)
-	}
-
-	for x := 0; x < 16; x++ {
-		for z := 0; z < 16; z++ {
-			for y := 0; y < int(rand.Float32()*6); y++ {
-				chk.Blocks[x][15-y][z].Type = nil
-			}
-		}
-	}
-
-	dim.Chunks[core.NewVec3(0, 0, 0)] = chk
-
-	renderers.MakeChunkVAO(dim, chk)
-
-	return dim
 }

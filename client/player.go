@@ -3,19 +3,25 @@ package client
 import (
 	"math"
 	"remakemc/client/renderers"
+	"remakemc/core"
 
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/go-gl/mathgl/mgl32"
 )
 
 type Player struct {
-	Position mgl32.Vec3
+	core.Entity
 
 	LookAzimuth   float64
 	LookElevation float64
 
 	Speed           float64
 	MouseSensitivty float64
+}
+
+// The position of the camera
+func (p *Player) CameraPos() mgl32.Vec3 {
+	return p.Position.Add(mgl32.Vec3{0.5, 1.8, 0.5})
 }
 
 // The direction the player is looking
@@ -41,37 +47,37 @@ func (p *Player) RightVec() mgl32.Vec3 {
 }
 
 // Process the keyboard input for this frame
-func (p *Player) ProcessKeyboard(deltaT float64) {
-	scal := float32(p.Speed * deltaT)
+func (p *Player) ProcessKeyboard() {
+	scal := float32(p.Speed)
 
 	// Move forwards
 	if renderers.Win.GetKey(glfw.KeyW) == glfw.Press {
-		p.Position = p.Position.Add(p.ForwardVec().Mul(scal))
+		p.AddImpulse(core.Impulse{Force: p.ForwardVec().Mul(scal), Remaining: 0.01})
 	}
 
 	// Move backwards
 	if renderers.Win.GetKey(glfw.KeyS) == glfw.Press {
-		p.Position = p.Position.Sub(p.ForwardVec().Mul(scal))
+		p.AddImpulse(core.Impulse{Force: p.ForwardVec().Mul(-scal), Remaining: 0.01})
 	}
 
 	// Move right
 	if renderers.Win.GetKey(glfw.KeyD) == glfw.Press {
-		p.Position = p.Position.Add(p.RightVec().Mul(scal))
+		p.AddImpulse(core.Impulse{Force: p.RightVec().Mul(scal), Remaining: 0.01})
 	}
 
 	// Move left
 	if renderers.Win.GetKey(glfw.KeyA) == glfw.Press {
-		p.Position = p.Position.Sub(p.RightVec().Mul(scal))
+		p.AddImpulse(core.Impulse{Force: p.RightVec().Mul(-scal), Remaining: 0.01})
 	}
 
 	// Fly up
 	if renderers.Win.GetKey(glfw.KeySpace) == glfw.Press {
-		p.Position = p.Position.Add(mgl32.Vec3{0, 1, 0}.Mul(scal))
+		p.AddImpulse(core.Impulse{Force: mgl32.Vec3{0, 1, 0}.Mul(scal * 3), Remaining: 0.01})
 	}
 
 	// Fly down
 	if renderers.Win.GetKey(glfw.KeyLeftShift) == glfw.Press {
-		p.Position = p.Position.Sub(mgl32.Vec3{0, 1, 0}.Mul(scal))
+		p.AddImpulse(core.Impulse{Force: mgl32.Vec3{0, 1, 0}.Mul(-scal * 3), Remaining: 0.01})
 	}
 }
 

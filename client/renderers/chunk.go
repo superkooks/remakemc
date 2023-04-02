@@ -137,9 +137,9 @@ func RenderChunks(dim *core.Dimension, view mgl32.Mat4) {
 	gl.BindTexture(gl.TEXTURE_2D, chunkTex)
 	gl.Uniform1i(chunkTUniform, int32(chunkTex-1))
 
-	for x := 0; x < 512; x += 16 {
+	for x := 0; x < 128; x += 16 {
 		for y := 0; y < 256; y += 16 {
-			for z := 0; z < 512; z += 16 {
+			for z := 0; z < 128; z += 16 {
 				RenderChunk(dim.Chunks[core.NewVec3(x, y, z)], view)
 			}
 		}

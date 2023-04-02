@@ -48,6 +48,10 @@ func FloorFloat32(f float32) int {
 	return int(math.Floor(float64(f)))
 }
 
+func CeilFloat32(f float32) int {
+	return int(math.Ceil(float64(f)))
+}
+
 // Trace a ray from the starting pos in dir, to a maxiumum of reach.
 // A callback will be made for each intersection in the voxel grid with
 // the coordinates of the block, and a subvoxel hit vector.

@@ -10,8 +10,8 @@ type Chunk struct {
 	Blocks   [][][]Block // x,y,z
 
 	// Render data
-	Mesh []float32
-	VAO  uint32
+	MeshLen int
+	VAO     uint32
 }
 
 type BlockFace int
@@ -26,9 +26,7 @@ const (
 )
 
 type Block struct {
-	Position Vec3
-	Data     interface{}
-	Type     *BlockType
+	Type *BlockType
 }
 
 type BlockType struct {
@@ -81,20 +79,20 @@ func (d *Dimension) GetBlockAt(pos Vec3) Block {
 	return chk.Blocks[x][y][z]
 }
 
-func (d *Dimension) SetBlockAt(b Block) {
+func (d *Dimension) SetBlockAt(b Block, pos Vec3) {
 	chk := d.Chunks[NewVec3(
-		FlooredDivision(b.Position.X, 16)*16,
-		FlooredDivision(b.Position.Y, 16)*16,
-		FlooredDivision(b.Position.Z, 16)*16,
+		FlooredDivision(pos.X, 16)*16,
+		FlooredDivision(pos.Y, 16)*16,
+		FlooredDivision(pos.Z, 16)*16,
 	)]
 
 	if chk == nil {
 		return
 	}
 
-	x := FlooredRemainder(b.Position.X, 16)
-	y := FlooredRemainder(b.Position.Y, 16)
-	z := FlooredRemainder(b.Position.Z, 16)
+	x := FlooredRemainder(pos.X, 16)
+	y := FlooredRemainder(pos.Y, 16)
+	z := FlooredRemainder(pos.Z, 16)
 	chk.Blocks[x][y][z] = b
 }
 

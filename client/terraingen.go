@@ -36,7 +36,7 @@ func GenTerrainColumn(chunkPos core.Vec3, dim *core.Dimension) {
 				a := make([]core.Block, 16)
 				for z := 0; z < 16; z++ {
 					height := heightmap[x][z]
-					bl := core.Block{Position: core.NewVec3(x+chunkPos.X, y+cy*16+chunkPos.Y, z+chunkPos.Z)}
+					bl := core.Block{}
 					if y+cy*16 < height-3 {
 						// Stone
 						bl.Type = blocks.Stone

@@ -8,6 +8,7 @@ import (
 	"remakemc/core"
 	"remakemc/core/blocks"
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
@@ -17,6 +18,9 @@ import (
 
 func Start() {
 	runtime.LockOSThread()
+
+	// Don't let allocated memory exceed 125% of in-use memory
+	debug.SetGCPercent(25)
 
 	// Initialize texture atlas
 	blocks.Grass.RenderType.Init()
@@ -36,8 +40,8 @@ func Start() {
 	dim := &core.Dimension{
 		Chunks: make(map[core.Vec3]*core.Chunk),
 	}
-	for x := -16; x < 256+16; x += 16 {
-		for z := -16; z < 256+16; z += 16 {
+	for x := -16; x < 512+16; x += 16 {
+		for z := -16; z < 512+16; z += 16 {
 			GenTerrainColumn(core.NewVec3(x, 0, z), dim)
 		}
 	}
@@ -94,8 +98,8 @@ func Start() {
 				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 				if block.Type != nil {
 					block.Type = nil
-					dim.SetBlockAt(block)
-					renderers.UpdateRequiredMeshes(dim, block.Position)
+					dim.SetBlockAt(block, core.NewVec3FromFloat(v))
+					renderers.UpdateRequiredMeshes(dim, core.NewVec3FromFloat(v))
 					return true
 				} else {
 					return false
@@ -110,11 +114,7 @@ func Start() {
 			core.TraceRay(player.LookVec(), player.Position, 16, func(v, h mgl32.Vec3) (stop bool) {
 				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 				if block.Type != nil {
-					placePos := core.Vec3{
-						X: block.Position.X,
-						Y: block.Position.Y,
-						Z: block.Position.Z,
-					}
+					placePos := core.NewVec3FromFloat(v)
 
 					switch core.FaceFromSubvoxel(h) {
 					case core.FaceTop:
@@ -132,10 +132,9 @@ func Start() {
 					}
 
 					dim.SetBlockAt(core.Block{
-						Position: placePos,
-						Type:     blocks.Cobblestone,
-					})
-					renderers.UpdateRequiredMeshes(dim, block.Position)
+						Type: blocks.Cobblestone,
+					}, placePos)
+					renderers.UpdateRequiredMeshes(dim, placePos)
 					return true
 				} else {
 					return false
@@ -146,19 +145,13 @@ func Start() {
 		}
 
 		// Render terrain
-		for x := 0; x < 256; x += 16 {
-			for y := 0; y < 256; y += 16 {
-				for z := 0; z < 256; z += 16 {
-					renderers.RenderChunk(dim.Chunks[core.NewVec3(x, y, z)], view)
-				}
-			}
-		}
+		renderers.RenderChunks(dim, view)
 
 		// Find selector position and render
 		core.TraceRay(player.LookVec(), player.Position, 16, func(v, _ mgl32.Vec3) (stop bool) {
 			block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 			if block.Type != nil {
-				renderers.RenderSelector(block.Position.ToFloat(), view)
+				renderers.RenderSelector(core.NewVec3FromFloat(v).ToFloat(), view)
 				return true
 			} else {
 				return false

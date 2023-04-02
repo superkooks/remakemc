@@ -117,11 +117,7 @@ void main() {
 	gl.GenerateMipmap(gl.TEXTURE_2D)
 }
 
-func RenderChunk(c *core.Chunk, view mgl32.Mat4) {
-	if len(c.Mesh) == 0 {
-		return
-	}
-
+func RenderChunks(dim *core.Dimension, view mgl32.Mat4) {
 	gl.UseProgram(chunkProg)
 	gl.Enable(gl.CULL_FACE)
 	gl.Enable(gl.DEPTH_TEST)
@@ -132,23 +128,37 @@ func RenderChunk(c *core.Chunk, view mgl32.Mat4) {
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
 	// Assign view & projection mats
-	projection := mgl32.Perspective(mgl32.DegToRad(FOVDegrees), GetAspectRatio(), 0.1, 300.0)
+	projection := mgl32.Perspective(mgl32.DegToRad(FOVDegrees), GetAspectRatio(), 0.1, 3000.0)
 	gl.UniformMatrix4fv(chunkPUniform, 1, false, &projection[0])
 	gl.UniformMatrix4fv(chunkVUniform, 1, false, &view[0])
-
-	// Translate chunk into position
-	p := c.Position.ToFloat()
-	model := mgl32.Translate3D(p[0], p[1], p[2])
-	gl.UniformMatrix4fv(chunkMUniform, 1, false, &model[0])
 
 	// Activate texture atlas
 	gl.ActiveTexture(gl.TEXTURE0)
 	gl.BindTexture(gl.TEXTURE_2D, chunkTex)
 	gl.Uniform1i(chunkTUniform, int32(chunkTex-1))
 
+	for x := 0; x < 512; x += 16 {
+		for y := 0; y < 256; y += 16 {
+			for z := 0; z < 512; z += 16 {
+				RenderChunk(dim.Chunks[core.NewVec3(x, y, z)], view)
+			}
+		}
+	}
+}
+
+func RenderChunk(c *core.Chunk, view mgl32.Mat4) {
+	if c.MeshLen == 0 {
+		return
+	}
+
+	// Translate chunk into position
+	p := c.Position.ToFloat()
+	model := mgl32.Translate3D(p[0], p[1], p[2])
+	gl.UniformMatrix4fv(chunkMUniform, 1, false, &model[0])
+
 	// Draw
 	gl.BindVertexArray(c.VAO)
-	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(c.Mesh)))
+	gl.DrawArrays(gl.TRIANGLES, 0, int32(c.MeshLen))
 }
 
 func MakeChunkVAO(d *core.Dimension, chunk *core.Chunk) {
@@ -156,15 +166,16 @@ func MakeChunkVAO(d *core.Dimension, chunk *core.Chunk) {
 	gl.GenVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
 
-	var normals, uvs []float32
-	chunk.Mesh, normals, uvs = MakeChunkMesh(d, chunk.Position)
+	var mesh, normals, uvs []float32
+	mesh, normals, uvs = MakeChunkMesh(d, chunk.Position)
+	chunk.MeshLen = len(mesh)
 
-	if len(chunk.Mesh) == 0 {
+	if len(mesh) == 0 {
 		return
 	}
 
 	gl.EnableVertexAttribArray(0)
-	gl.BindBuffer(gl.ARRAY_BUFFER, GlBufferFrom(chunk.Mesh))
+	gl.BindBuffer(gl.ARRAY_BUFFER, GlBufferFrom(mesh))
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, nil) // vec3
 
 	gl.EnableVertexAttribArray(1)

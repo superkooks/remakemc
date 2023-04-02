@@ -12,6 +12,7 @@ import (
 // Documentation for AppConfig resides in the default config file
 type AppConfig struct {
 	PublicServer bool
+	ServePprof   bool
 
 	Client struct {
 		DefaultHeight int

@@ -29,10 +29,11 @@ func GenTerrainColumn(chunkPos core.Vec3, dim *core.Dimension) {
 			Position: chunkPos.Add(core.Vec3{Y: cy * 16}),
 		}
 
+		chk.Blocks = make([][][]core.Block, 16)
 		for x := 0; x < 16; x++ {
-			var b [][]core.Block
+			b := make([][]core.Block, 16)
 			for y := 0; y < 16; y++ {
-				var a []core.Block
+				a := make([]core.Block, 16)
 				for z := 0; z < 16; z++ {
 					height := heightmap[x][z]
 					bl := core.Block{Position: core.NewVec3(x+chunkPos.X, y+cy*16+chunkPos.Y, z+chunkPos.Z)}
@@ -47,12 +48,13 @@ func GenTerrainColumn(chunkPos core.Vec3, dim *core.Dimension) {
 						bl.Type = blocks.Grass
 					}
 
-					a = append(a, bl)
+					a[z] = bl
 				}
 
-				b = append(b, a)
+				b[y] = a
 			}
-			chk.Blocks = append(chk.Blocks, b)
+
+			chk.Blocks[x] = b
 		}
 
 		dim.Chunks[chk.Position] = chk

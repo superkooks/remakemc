@@ -3,6 +3,9 @@
     # The server will be made available on the specified port
     "publicserver": false,
 
+    # Serve pprof on localhost:6060. Used for debugging.
+    "servepprof": false,
+
     "client": {
         # The width & height the game window starts at
         "defaultwidth": 1920,

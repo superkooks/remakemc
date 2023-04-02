@@ -10,6 +10,8 @@ import (
 var Win *glfw.Window
 var FOVDegrees float32 = 70
 
+var cachedAspectRatio float32
+
 func InitAll(width, height int) {
 	// Init GLFW window
 	Win = initGlfw(width, height)
@@ -28,8 +30,12 @@ func InitAll(width, height int) {
 }
 
 func GetAspectRatio() float32 {
-	winX, winY := Win.GetSize()
-	return float32(winX) / float32(winY)
+	// TODO Expire cache
+	if cachedAspectRatio == 0 {
+		winX, winY := Win.GetSize()
+		cachedAspectRatio = float32(winX) / float32(winY)
+	}
+	return cachedAspectRatio
 }
 
 func initGlfw(width, height int) *glfw.Window {

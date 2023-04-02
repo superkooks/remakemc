@@ -1,12 +1,14 @@
 package client
 
 import (
+	"fmt"
 	"remakemc/client/gui"
 	"remakemc/client/renderers"
 	"remakemc/config"
 	"remakemc/core"
 	"remakemc/core/blocks"
 	"runtime"
+	"time"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
@@ -30,17 +32,21 @@ func Start() {
 	gui.Init()
 
 	// Initialize terrain
+	t := time.Now()
 	dim := &core.Dimension{
 		Chunks: make(map[core.Vec3]*core.Chunk),
 	}
-	for x := 0; x < 256; x += 16 {
-		for z := 0; z < 256; z += 16 {
+	for x := -16; x < 256+16; x += 16 {
+		for z := -16; z < 256+16; z += 16 {
 			GenTerrainColumn(core.NewVec3(x, 0, z), dim)
 		}
 	}
+	fmt.Println("Generated initial terrain in", time.Since(t))
+	t = time.Now()
 	for _, v := range dim.Chunks {
 		renderers.MakeChunkVAO(dim, v)
 	}
+	fmt.Println("Generated initial terrain VAOs in", time.Since(t))
 
 	// Initialize player
 	player := &Player{Speed: 10, Position: mgl32.Vec3{2, 2, -2}}
@@ -52,11 +58,22 @@ func Start() {
 
 	// Game loop
 	previousTime := glfw.GetTime()
+	var frames int
+	var cumulativeTime float64
 	for !renderers.Win.ShouldClose() {
 		// Get delta time
 		time := glfw.GetTime()
 		deltaTime := time - previousTime
 		previousTime = time
+
+		// Calculate frame rate
+		frames++
+		cumulativeTime += deltaTime
+		if frames == 60 {
+			fmt.Println(1/(cumulativeTime/60), "fps")
+			frames = 0
+			cumulativeTime = 0
+		}
 
 		// Clear window
 		gl.ClearColor(79.0/255, 167.0/255, 234.0/255, 1.0)
@@ -129,8 +146,12 @@ func Start() {
 		}
 
 		// Render terrain
-		for _, v := range dim.Chunks {
-			renderers.RenderChunk(v, view)
+		for x := 0; x < 256; x += 16 {
+			for y := 0; y < 256; y += 16 {
+				for z := 0; z < 256; z += 16 {
+					renderers.RenderChunk(dim.Chunks[core.NewVec3(x, y, z)], view)
+				}
+			}
 		}
 
 		// Find selector position and render

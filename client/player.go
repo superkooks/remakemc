@@ -12,6 +12,11 @@ import (
 type Player struct {
 	core.Entity
 
+	// Whether the player is Creative mode flying
+	Flying    bool
+	Sprinting bool
+	Sneaking  bool
+
 	LookAzimuth   float64
 	LookElevation float64
 
@@ -19,13 +24,19 @@ type Player struct {
 	MouseSensitivty float64
 }
 
+func NewPlayer(position mgl32.Vec3) *Player {
+	p := &Player{Speed: 1, Entity: core.Entity{Position: position, AABB: mgl32.Vec3{0.6, 1.8, 0.6}}}
+	p.TickCallback = p.ProcessMovement
+	return p
+}
+
 // The position of the camera
 func (p *Player) CameraPos() mgl32.Vec3 {
-	return p.Position.Add(mgl32.Vec3{0.5, 1.8, 0.5})
+	return p.Position.Add(mgl32.Vec3{0.3, 1.62, 0.3})
 }
 
 // The direction the player is looking
-func (p *Player) LookVec() mgl32.Vec3 {
+func (p *Player) LookDir() mgl32.Vec3 {
 	return mgl32.Vec3{
 		float32(math.Cos(p.LookElevation) * math.Sin(p.LookAzimuth)),
 		float32(math.Sin(p.LookElevation)),
@@ -46,39 +57,102 @@ func (p *Player) RightVec() mgl32.Vec3 {
 	}
 }
 
-// Process the keyboard input for this frame
-func (p *Player) ProcessKeyboard() {
-	scal := float32(p.Speed)
+// Process the keyboard input and physics for this frame
+func (p *Player) ProcessMovement() {
+	// Jump
+	var jumping bool
+	if renderers.Win.GetKey(glfw.KeySpace) == glfw.Press && p.OnGround() {
+		// TODO Add timeout to next jump
+		p.Velocity[1] = 8.4
+		jumping = true
+	}
+
+	// Sneak
+	if renderers.Win.GetKey(glfw.KeyLeftShift) == glfw.Press {
+		p.Sneaking = true
+	} else {
+		p.Sneaking = false
+	}
+
+	// Sprint
+	if renderers.Win.GetKey(glfw.KeyLeftControl) == glfw.Press {
+		p.Sprinting = true
+	}
+
+	var walkVec mgl32.Vec2
 
 	// Move forwards
 	if renderers.Win.GetKey(glfw.KeyW) == glfw.Press {
-		p.AddImpulse(core.Impulse{Force: p.ForwardVec().Mul(scal), Remaining: 0.01})
+		walkVec[0] += 1
 	}
-
 	// Move backwards
 	if renderers.Win.GetKey(glfw.KeyS) == glfw.Press {
-		p.AddImpulse(core.Impulse{Force: p.ForwardVec().Mul(-scal), Remaining: 0.01})
+		walkVec[0] += -1
 	}
-
 	// Move right
 	if renderers.Win.GetKey(glfw.KeyD) == glfw.Press {
-		p.AddImpulse(core.Impulse{Force: p.RightVec().Mul(scal), Remaining: 0.01})
+		walkVec[1] += 1
 	}
-
 	// Move left
 	if renderers.Win.GetKey(glfw.KeyA) == glfw.Press {
-		p.AddImpulse(core.Impulse{Force: p.RightVec().Mul(-scal), Remaining: 0.01})
+		walkVec[1] += -1
 	}
 
-	// Fly up
-	if renderers.Win.GetKey(glfw.KeySpace) == glfw.Press {
-		p.AddImpulse(core.Impulse{Force: mgl32.Vec3{0, 1, 0}.Mul(scal * 3), Remaining: 0.01})
+	if walkVec.X() == 0 {
+		p.Sprinting = false
 	}
 
-	// Fly down
-	if renderers.Win.GetKey(glfw.KeyLeftShift) == glfw.Press {
-		p.AddImpulse(core.Impulse{Force: mgl32.Vec3{0, 1, 0}.Mul(-scal * 3), Remaining: 0.01})
+	// Procees horizontal velocity according to
+	// https://www.mcpk.wiki/wiki/Horizontal_Movement_Formulas
+	moveMult := 1.0
+	if p.Sprinting {
+		moveMult = 1.3
+	} else if p.Sneaking {
+		moveMult = 0.3
+	} else if walkVec.X() == 0 && walkVec.Y() == 0 {
+		moveMult = 0
 	}
+	if walkVec.X() == 0 || walkVec.Y() == 0 {
+		moveMult *= 0.98
+	} else if p.Sneaking {
+		moveMult *= 0.98 * math.Sqrt(2)
+	}
+
+	slipperiness := 1.0
+	if p.OnGround() {
+		slipperiness = 0.6
+	}
+
+	groundAccel := float32(moveMult*p.Speed*math.Pow(0.6/slipperiness, 3)) * 0.1 * 20
+	direction := p.LookAzimuth
+	if moveMult != 0 {
+		direction -= math.Atan(float64(walkVec.Y() / walkVec.X()))
+	}
+	if walkVec.X() < 0 {
+		direction += math.Pi
+	}
+
+	p.Velocity[0] *= float32(0.91 * slipperiness)
+	p.Velocity[2] *= float32(0.91 * slipperiness)
+
+	if jumping {
+		p.Velocity[0] += groundAccel * float32(math.Sin(direction))
+		p.Velocity[2] += groundAccel * float32(math.Cos(direction))
+
+		if p.Sprinting {
+			p.Velocity[0] += 0.2 * float32(math.Sin(p.LookAzimuth)) * 20 * 0.91 * 0.6
+			p.Velocity[2] += 0.2 * float32(math.Cos(p.LookAzimuth)) * 20 * 0.91 * 0.6
+		}
+
+	} else if p.OnGround() {
+		p.Velocity[0] += groundAccel * float32(math.Sin(direction))
+		p.Velocity[2] += groundAccel * float32(math.Cos(direction))
+
+	} else {
+		p.Velocity[0] += 0.02 * float32(moveMult*math.Sin(direction)*20)
+		p.Velocity[2] += 0.02 * float32(moveMult*math.Cos(direction)*20)
+	}
+
 }
 
 // Process the mouse input for this frame

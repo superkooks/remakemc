@@ -53,7 +53,7 @@ func Start() {
 	fmt.Println("Generated initial terrain VAOs in", time.Since(t))
 
 	// Initialize player
-	player := &Player{Speed: 10, Entity: core.Entity{Position: mgl32.Vec3{5.1, 70, 5.1}, AABB: mgl32.Vec3{1, 2, 1}}}
+	player := NewPlayer(mgl32.Vec3{5.1, 70, 5.1})
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
 
 	// Initialize inputs
@@ -85,17 +85,16 @@ func Start() {
 
 		// Process user input and recalculate view matrix
 		player.ProcessMousePosition(deltaTime)
-		player.ProcessKeyboard()
-		player.PhysicsTick(deltaTime, dim)
+		player.PhysicsUpdate(deltaTime, dim)
 		view := mgl32.LookAtV(
 			player.CameraPos(),                       // Camera is at ... in World Space
-			player.CameraPos().Add(player.LookVec()), // and looks at
+			player.CameraPos().Add(player.LookDir()), // and looks at
 			mgl32.Vec3{0, 1, 0},                      // Head is up
 		)
 
 		// Mining
 		if renderers.Win.GetMouseButton(glfw.MouseButton1) == glfw.Press && mouseOne.Invoke() {
-			core.TraceRay(player.LookVec(), player.CameraPos(), 16, func(v, _ mgl32.Vec3) (stop bool) {
+			core.TraceRay(player.LookDir(), player.CameraPos(), 16, func(v, _ mgl32.Vec3) (stop bool) {
 				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 				if block.Type != nil {
 					block.Type = nil
@@ -112,7 +111,7 @@ func Start() {
 
 		// Placing
 		if renderers.Win.GetMouseButton(glfw.MouseButton2) == glfw.Press && mouseTwo.Invoke() {
-			core.TraceRay(player.LookVec(), player.CameraPos(), 16, func(v, h mgl32.Vec3) (stop bool) {
+			core.TraceRay(player.LookDir(), player.CameraPos(), 16, func(v, h mgl32.Vec3) (stop bool) {
 				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 				if block.Type != nil {
 					placePos := core.NewVec3FromFloat(v)
@@ -149,7 +148,7 @@ func Start() {
 		renderers.RenderChunks(dim, view)
 
 		// Find selector position and render
-		core.TraceRay(player.LookVec(), player.CameraPos(), 16, func(v, _ mgl32.Vec3) (stop bool) {
+		core.TraceRay(player.LookDir(), player.CameraPos(), 16, func(v, _ mgl32.Vec3) (stop bool) {
 			block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 			if block.Type != nil {
 				renderers.RenderSelector(core.NewVec3FromFloat(v).ToFloat(), view)

@@ -102,10 +102,10 @@ void main() {
 func RenderSelector(pos mgl32.Vec3, view mgl32.Mat4) {
 	gl.UseProgram(selectorProg)
 	gl.Enable(gl.DEPTH_TEST)
-	gl.DepthFunc(gl.LESS)
+	gl.DepthFunc(gl.LEQUAL)
 
 	// Assign view & projection mats
-	projection := mgl32.Perspective(mgl32.DegToRad(FOVDegrees), GetAspectRatio(), 0.1, 300.0)
+	projection := mgl32.Perspective(mgl32.DegToRad(FOVDegrees), GetAspectRatio(), 0.05, 1024.0)
 	gl.UniformMatrix4fv(selectorPUniform, 1, false, &projection[0])
 	gl.UniformMatrix4fv(selectorVUniform, 1, false, &view[0])
 

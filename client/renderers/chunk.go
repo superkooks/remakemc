@@ -128,7 +128,7 @@ func RenderChunks(dim *core.Dimension, view mgl32.Mat4) {
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
 	// Assign view & projection mats
-	projection := mgl32.Perspective(mgl32.DegToRad(FOVDegrees), GetAspectRatio(), 0.1, 3000.0)
+	projection := mgl32.Perspective(mgl32.DegToRad(FOVDegrees), GetAspectRatio(), 0.05, 1024.0)
 	gl.UniformMatrix4fv(chunkPUniform, 1, false, &projection[0])
 	gl.UniformMatrix4fv(chunkVUniform, 1, false, &view[0])
 

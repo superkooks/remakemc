@@ -26,10 +26,12 @@ uniform mat4 model;
 layout (location = 0) in vec3 vp;
 layout (location = 1) in vec3 vertexNormal;
 layout (location = 2) in vec2 vertexUV;
+layout (location = 3) in float vertexLL;
 
 out vec3 fragNormal;
 out vec3 fragVertex;
 out vec2 fragUV;
+out float fragLL;
 out mat4 fragModel;
 
 void main() {
@@ -39,6 +41,7 @@ void main() {
 	fragNormal = vertexNormal;
 	fragUV = vertexUV;
 	fragModel = model;
+	fragLL = vertexLL;
 }`+"\x00", gl.VERTEX_SHADER)
 	if err != nil {
 		panic(err)
@@ -53,6 +56,7 @@ uniform sampler2D fragTexture;
 in vec3 fragNormal;
 in vec3 fragVertex;
 in vec2 fragUV;
+in float fragLL;
 in mat4 fragModel;
 
 out vec4 color;
@@ -80,7 +84,7 @@ void main() {
     vec3 surfaceToCamera = normalize(cameraPosition - surfacePos);
 
     // Combine color from all the lights
-    vec3 linearColor = ApplyLight(surfaceColor.rgb, normal, surfacePos, surfaceToCamera);
+    vec3 linearColor = ApplyLight(surfaceColor.rgb, normal, surfacePos, surfaceToCamera) * fragLL;
     
     // Final color (after gamma correction)
     vec3 gamma = vec3(1.0/1.2);
@@ -166,8 +170,8 @@ func MakeChunkVAO(d *core.Dimension, chunk *core.Chunk) {
 	gl.GenVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
 
-	var mesh, normals, uvs []float32
-	mesh, normals, uvs = MakeChunkMesh(d, chunk.Position)
+	var mesh, normals, uvs, lightLevels []float32
+	mesh, normals, uvs, lightLevels = MakeChunkMesh(d, chunk.Position)
 	chunk.MeshLen = len(mesh)
 
 	if len(mesh) == 0 {
@@ -185,6 +189,10 @@ func MakeChunkVAO(d *core.Dimension, chunk *core.Chunk) {
 	gl.EnableVertexAttribArray(2)
 	gl.BindBuffer(gl.ARRAY_BUFFER, GlBufferFrom(uvs))
 	gl.VertexAttribPointer(2, 2, gl.FLOAT, false, 0, nil) // vec2
+
+	gl.EnableVertexAttribArray(3)
+	gl.BindBuffer(gl.ARRAY_BUFFER, GlBufferFrom(lightLevels))
+	gl.VertexAttribPointer(3, 1, gl.FLOAT, false, 0, nil) // float
 
 	chunk.VAO = vao
 }
@@ -235,7 +243,7 @@ func UpdateRequiredMeshes(dim *core.Dimension, updatePos core.Vec3) {
 	}
 }
 
-func MakeChunkMesh(d *core.Dimension, chunkPos core.Vec3) (verts, normals, uvs []float32) {
+func MakeChunkMesh(d *core.Dimension, chunkPos core.Vec3) (verts, normals, uvs, lightLevels []float32) {
 	for x := 0; x < 16; x++ {
 		for y := 0; y < 16; y++ {
 			for z := 0; z < 16; z++ {
@@ -249,59 +257,185 @@ func MakeChunkMesh(d *core.Dimension, chunkPos core.Vec3) (verts, normals, uvs [
 				// Top
 				top := d.GetBlockAt(global.Add(core.Vec3{Y: 1}))
 				if top.Type == nil || top.Type.Transparent {
-					v, n, u := b.Type.RenderType.RenderFace(core.FaceTop, local.ToFloat())
-					verts = append(verts, v...)
-					normals = append(normals, n...)
-					uvs = append(uvs, u...)
+					face := core.FaceTop
+					ll, flip := MakeLightLevelsForFace(d, global, face)
+					v, n, u := b.Type.RenderType.RenderFace(face, local.ToFloat())
+					verts = append(verts, flipIfTrue(v, flip, face, 3)...)
+					normals = append(normals, flipIfTrue(n, flip, face, 3)...)
+					uvs = append(uvs, flipIfTrue(u, flip, face, 2)...)
+					lightLevels = append(lightLevels, flipIfTrue(ll, flip, face, 1)...)
 				}
 
 				// Bottom
 				bottom := d.GetBlockAt(global.Add(core.Vec3{Y: -1}))
 				if bottom.Type == nil || bottom.Type.Transparent {
-					v, n, u := b.Type.RenderType.RenderFace(core.FaceBottom, local.ToFloat())
-					verts = append(verts, v...)
-					normals = append(normals, n...)
-					uvs = append(uvs, u...)
+					face := core.FaceBottom
+					ll, flip := MakeLightLevelsForFace(d, global, face)
+					v, n, u := b.Type.RenderType.RenderFace(face, local.ToFloat())
+					verts = append(verts, flipIfTrue(v, flip, face, 3)...)
+					normals = append(normals, flipIfTrue(n, flip, face, 3)...)
+					uvs = append(uvs, flipIfTrue(u, flip, face, 2)...)
+					lightLevels = append(lightLevels, flipIfTrue(ll, flip, face, 1)...)
 				}
 
 				// Left
 				left := d.GetBlockAt(global.Add(core.Vec3{X: -1}))
 				if left.Type == nil || left.Type.Transparent {
-					v, n, u := b.Type.RenderType.RenderFace(core.FaceLeft, local.ToFloat())
-					verts = append(verts, v...)
-					normals = append(normals, n...)
-					uvs = append(uvs, u...)
+					face := core.FaceLeft
+					ll, flip := MakeLightLevelsForFace(d, global, face)
+					v, n, u := b.Type.RenderType.RenderFace(face, local.ToFloat())
+					verts = append(verts, flipIfTrue(v, flip, face, 3)...)
+					normals = append(normals, flipIfTrue(n, flip, face, 3)...)
+					uvs = append(uvs, flipIfTrue(u, flip, face, 2)...)
+					lightLevels = append(lightLevels, flipIfTrue(ll, flip, face, 1)...)
 				}
 
 				// Right
 				right := d.GetBlockAt(global.Add(core.Vec3{X: 1}))
 				if right.Type == nil || right.Type.Transparent {
-					v, n, u := b.Type.RenderType.RenderFace(core.FaceRight, local.ToFloat())
-					verts = append(verts, v...)
-					normals = append(normals, n...)
-					uvs = append(uvs, u...)
+					face := core.FaceRight
+					ll, flip := MakeLightLevelsForFace(d, global, face)
+					v, n, u := b.Type.RenderType.RenderFace(face, local.ToFloat())
+					verts = append(verts, flipIfTrue(v, flip, face, 3)...)
+					normals = append(normals, flipIfTrue(n, flip, face, 3)...)
+					uvs = append(uvs, flipIfTrue(u, flip, face, 2)...)
+					lightLevels = append(lightLevels, flipIfTrue(ll, flip, face, 1)...)
 				}
 
 				// Front
 				front := d.GetBlockAt(global.Add(core.Vec3{Z: 1}))
 				if front.Type == nil || front.Type.Transparent {
-					v, n, u := b.Type.RenderType.RenderFace(core.FaceFront, local.ToFloat())
-					verts = append(verts, v...)
-					normals = append(normals, n...)
-					uvs = append(uvs, u...)
+					face := core.FaceFront
+					ll, flip := MakeLightLevelsForFace(d, global, face)
+					v, n, u := b.Type.RenderType.RenderFace(face, local.ToFloat())
+					verts = append(verts, flipIfTrue(v, flip, face, 3)...)
+					normals = append(normals, flipIfTrue(n, flip, face, 3)...)
+					uvs = append(uvs, flipIfTrue(u, flip, face, 2)...)
+					lightLevels = append(lightLevels, flipIfTrue(ll, flip, face, 1)...)
 				}
 
 				// Back
 				back := d.GetBlockAt(global.Add(core.Vec3{Z: -1}))
 				if back.Type == nil || back.Type.Transparent {
-					v, n, u := b.Type.RenderType.RenderFace(core.FaceBack, local.ToFloat())
-					verts = append(verts, v...)
-					normals = append(normals, n...)
-					uvs = append(uvs, u...)
+					face := core.FaceBack
+					ll, flip := MakeLightLevelsForFace(d, global, face)
+					v, n, u := b.Type.RenderType.RenderFace(face, local.ToFloat())
+					verts = append(verts, flipIfTrue(v, flip, face, 3)...)
+					normals = append(normals, flipIfTrue(n, flip, face, 3)...)
+					uvs = append(uvs, flipIfTrue(u, flip, face, 2)...)
+					lightLevels = append(lightLevels, flipIfTrue(ll, flip, face, 1)...)
 				}
 			}
 		}
 	}
 
 	return
+}
+
+// Returns the light levels for each vertex of a face, and whether the triangles should be flipped
+// for that face
+func MakeLightLevelsForFace(dim *core.Dimension, pos core.Vec3, face core.BlockFace) ([]float32, bool) {
+	var out []float32
+	var shared mgl32.Vec3
+	m := make(map[mgl32.Vec3]float32)
+	for i := 0; i < 18; i += 3 {
+		fv := mgl32.Vec3{faceVertices[face][i], faceVertices[face][i+1], faceVertices[face][i+2]}
+
+		ll := getLightLevelForVert(dim, pos.ToFloat().Add(fv), face)
+		out = append(out, ll)
+		if _, ok := m[fv]; ok {
+			shared = fv
+		}
+		m[fv] = ll
+	}
+
+	// Check which diagonal has the brightest lighting
+	diagLight := float32(-1)
+	for k, v := range m {
+		for l, w := range m {
+			if k.Sub(l).LenSqr() == 2 {
+				// This pair is a diagonal
+				if diagLight < 0 {
+					diagLight = v + w
+				}
+				if diagLight > 0 && v+w != float32(diagLight) {
+					if k == shared || l == shared {
+						return out, v+w < diagLight
+					} else {
+						return out, v+w > diagLight
+					}
+				}
+			}
+		}
+	}
+
+	return out, false
+}
+
+// Flip the triangles for a face, if the cond is true, and with vec size n
+func flipIfTrue(verts []float32, cond bool, face core.BlockFace, n int) []float32 {
+	if !cond {
+		return verts
+	}
+
+	out := make([]float32, len(verts))
+	for k, v := range flipMap[face] {
+		for i := 0; i < n; i++ {
+			out[k*n+i] = verts[v*n+i]
+		}
+	}
+
+	return out
+}
+
+func getLightLevelForVert(dim *core.Dimension, pos mgl32.Vec3, face core.BlockFace) float32 {
+	// Take the average of the block light levels surrounding this vert
+	p := core.NewVec3FromFloat(pos)
+	switch face {
+	case core.FaceTop, core.FaceBottom:
+		// Check the 2x2 area around this vert, on the XZ plane
+		if face == core.FaceBottom {
+			p = p.Add(core.NewVec3(0, -1, 0))
+		}
+
+		sum := getBlockLightLevel(dim, p)
+		sum += getBlockLightLevel(dim, p.Add(core.NewVec3(-1, 0, 0)))
+		sum += getBlockLightLevel(dim, p.Add(core.NewVec3(-1, 0, -1)))
+		sum += getBlockLightLevel(dim, p.Add(core.NewVec3(0, 0, -1)))
+		return sum / 4
+
+	case core.FaceLeft, core.FaceRight:
+		if face == core.FaceRight {
+			p = p.Add(core.NewVec3(1, 0, 0))
+		}
+
+		sum := getBlockLightLevel(dim, p.Add(core.NewVec3(-1, 0, 0)))
+		sum += getBlockLightLevel(dim, p.Add(core.NewVec3(-1, 0, -1)))
+		sum += getBlockLightLevel(dim, p.Add(core.NewVec3(-1, -1, 0)))
+		sum += getBlockLightLevel(dim, p.Add(core.NewVec3(-1, -1, -1)))
+		return sum / 4
+
+	case core.FaceFront, core.FaceBack:
+		if face == core.FaceFront {
+			p = p.Add(core.NewVec3(0, 0, 1))
+		}
+
+		sum := getBlockLightLevel(dim, p.Add(core.NewVec3(0, 0, -1)))
+		sum += getBlockLightLevel(dim, p.Add(core.NewVec3(-1, 0, -1)))
+		sum += getBlockLightLevel(dim, p.Add(core.NewVec3(0, -1, -1)))
+		sum += getBlockLightLevel(dim, p.Add(core.NewVec3(-1, -1, -1)))
+		return sum / 4
+
+	default:
+		panic("unknown face")
+	}
+}
+
+func getBlockLightLevel(dim *core.Dimension, pos core.Vec3) float32 {
+	// TODO STUB
+	if dim.GetBlockAt(pos).Type == nil {
+		return 1
+	} else {
+		return 0
+	}
 }

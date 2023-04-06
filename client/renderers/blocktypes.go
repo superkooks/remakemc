@@ -14,7 +14,7 @@ func (t BasicOneTex) Init() {
 	BlockAtlas.AddTexFromAssets(t.Tex)
 }
 
-func (t BasicOneTex) RenderFace(face core.BlockFace, pos mgl32.Vec3) (verts []float32, normals []float32, uvs []float32) {
+func (t BasicOneTex) RenderFace(face core.BlockFace, pos mgl32.Vec3) (verts, normals, uvs []float32) {
 	atlasStart, atlasEnd := BlockAtlas.GetUV(t.Tex)
 
 	verts = makeFace(faceVertices[face], pos)
@@ -196,5 +196,28 @@ var faceUVs = map[core.BlockFace][]float32{
 		1, 0,
 		0, 1,
 		1, 1,
+	},
+}
+
+// New vertices for each face, represented by a an index into the original
+// face, that represent the alternative pair of triangles to render that face.
+var flipMap = map[core.BlockFace][]int{
+	core.FaceTop: {
+		0, 1, 5, 0, 5, 2,
+	},
+	core.FaceBottom: {
+		0, 1, 4, 0, 4, 2,
+	},
+	core.FaceLeft: {
+		2, 4, 1, 2, 0, 4,
+	},
+	core.FaceRight: {
+		1, 5, 0, 2, 5, 1,
+	},
+	core.FaceFront: {
+		0, 1, 4, 0, 4, 2,
+	},
+	core.FaceBack: {
+		0, 1, 5, 0, 5, 2,
 	},
 }

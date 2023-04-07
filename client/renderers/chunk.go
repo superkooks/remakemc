@@ -141,9 +141,9 @@ func RenderChunks(dim *core.Dimension, view mgl32.Mat4) {
 	gl.BindTexture(gl.TEXTURE_2D, chunkTex)
 	gl.Uniform1i(chunkTUniform, int32(chunkTex-1))
 
-	for x := 0; x < 128; x += 16 {
+	for x := 0; x < 512; x += 16 {
 		for y := 0; y < 256; y += 16 {
-			for z := 0; z < 128; z += 16 {
+			for z := 0; z < 512; z += 16 {
 				RenderChunk(dim.Chunks[core.NewVec3(x, y, z)], view)
 			}
 		}
@@ -244,18 +244,20 @@ func UpdateRequiredMeshes(dim *core.Dimension, updatePos core.Vec3) {
 }
 
 func MakeChunkMesh(d *core.Dimension, chunkPos core.Vec3) (verts, normals, uvs, lightLevels []float32) {
+	chunkGuess := d.Chunks[chunkPos]
+
 	for x := 0; x < 16; x++ {
 		for y := 0; y < 16; y++ {
 			for z := 0; z < 16; z++ {
 				local := core.NewVec3(x, y, z)
 				global := chunkPos.Add(local)
-				b := d.GetBlockAt(global)
+				b := d.GetBlockAtOptimised(global, chunkGuess)
 				if b.Type == nil {
 					continue
 				}
 
 				// Top
-				top := d.GetBlockAt(global.Add(core.Vec3{Y: 1}))
+				top := d.GetBlockAtOptimised(global.Add(core.Vec3{Y: 1}), chunkGuess)
 				if top.Type == nil || top.Type.Transparent {
 					face := core.FaceTop
 					ll, flip := MakeLightLevelsForFace(d, global, face)
@@ -267,7 +269,7 @@ func MakeChunkMesh(d *core.Dimension, chunkPos core.Vec3) (verts, normals, uvs, 
 				}
 
 				// Bottom
-				bottom := d.GetBlockAt(global.Add(core.Vec3{Y: -1}))
+				bottom := d.GetBlockAtOptimised(global.Add(core.Vec3{Y: -1}), chunkGuess)
 				if bottom.Type == nil || bottom.Type.Transparent {
 					face := core.FaceBottom
 					ll, flip := MakeLightLevelsForFace(d, global, face)
@@ -279,7 +281,7 @@ func MakeChunkMesh(d *core.Dimension, chunkPos core.Vec3) (verts, normals, uvs, 
 				}
 
 				// Left
-				left := d.GetBlockAt(global.Add(core.Vec3{X: -1}))
+				left := d.GetBlockAtOptimised(global.Add(core.Vec3{X: -1}), chunkGuess)
 				if left.Type == nil || left.Type.Transparent {
 					face := core.FaceLeft
 					ll, flip := MakeLightLevelsForFace(d, global, face)
@@ -291,7 +293,7 @@ func MakeChunkMesh(d *core.Dimension, chunkPos core.Vec3) (verts, normals, uvs, 
 				}
 
 				// Right
-				right := d.GetBlockAt(global.Add(core.Vec3{X: 1}))
+				right := d.GetBlockAtOptimised(global.Add(core.Vec3{X: 1}), chunkGuess)
 				if right.Type == nil || right.Type.Transparent {
 					face := core.FaceRight
 					ll, flip := MakeLightLevelsForFace(d, global, face)
@@ -303,7 +305,7 @@ func MakeChunkMesh(d *core.Dimension, chunkPos core.Vec3) (verts, normals, uvs, 
 				}
 
 				// Front
-				front := d.GetBlockAt(global.Add(core.Vec3{Z: 1}))
+				front := d.GetBlockAtOptimised(global.Add(core.Vec3{Z: 1}), chunkGuess)
 				if front.Type == nil || front.Type.Transparent {
 					face := core.FaceFront
 					ll, flip := MakeLightLevelsForFace(d, global, face)
@@ -315,7 +317,7 @@ func MakeChunkMesh(d *core.Dimension, chunkPos core.Vec3) (verts, normals, uvs, 
 				}
 
 				// Back
-				back := d.GetBlockAt(global.Add(core.Vec3{Z: -1}))
+				back := d.GetBlockAtOptimised(global.Add(core.Vec3{Z: -1}), chunkGuess)
 				if back.Type == nil || back.Type.Transparent {
 					face := core.FaceBack
 					ll, flip := MakeLightLevelsForFace(d, global, face)
@@ -433,6 +435,7 @@ func getLightLevelForVert(dim *core.Dimension, pos mgl32.Vec3, face core.BlockFa
 
 func getBlockLightLevel(dim *core.Dimension, pos core.Vec3) float32 {
 	// TODO STUB
+	// Turns out optimising this GetBlockAt barely improves perf
 	if dim.GetBlockAt(pos).Type == nil {
 		return 1
 	} else {

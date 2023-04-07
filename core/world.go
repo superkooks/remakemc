@@ -79,6 +79,31 @@ func (d *Dimension) GetBlockAt(pos Vec3) Block {
 	return chk.Blocks[x][y][z]
 }
 
+// Prevent a hashmap lookup if the pos falls within the given chunk
+func (d *Dimension) GetBlockAtOptimised(pos Vec3, chunkGuess *Chunk) Block {
+	var chk *Chunk
+	if pos.X > chunkGuess.Position.X && pos.X < chunkGuess.Position.X+16 &&
+		pos.Y > chunkGuess.Position.Y && pos.Y < chunkGuess.Position.Y+16 &&
+		pos.Z > chunkGuess.Position.Z && pos.Z < chunkGuess.Position.Z+16 {
+		chk = chunkGuess
+	} else {
+		chk = d.Chunks[NewVec3(
+			FlooredDivision(pos.X, 16)*16,
+			FlooredDivision(pos.Y, 16)*16,
+			FlooredDivision(pos.Z, 16)*16,
+		)]
+	}
+
+	if chk == nil {
+		return Block{}
+	}
+
+	x := FlooredRemainder(pos.X, 16)
+	y := FlooredRemainder(pos.Y, 16)
+	z := FlooredRemainder(pos.Z, 16)
+	return chk.Blocks[x][y][z]
+}
+
 func (d *Dimension) SetBlockAt(b Block, pos Vec3) {
 	chk := d.Chunks[NewVec3(
 		FlooredDivision(pos.X, 16)*16,

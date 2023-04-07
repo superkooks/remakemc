@@ -40,8 +40,8 @@ func Start() {
 	dim := &core.Dimension{
 		Chunks: make(map[core.Vec3]*core.Chunk),
 	}
-	for x := -16; x < 128+16; x += 16 {
-		for z := -16; z < 128+16; z += 16 {
+	for x := -16; x < 512+16; x += 16 {
+		for z := -16; z < 512+16; z += 16 {
 			GenTerrainColumn(core.NewVec3(x, 0, z), dim)
 		}
 	}

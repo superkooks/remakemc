@@ -4,16 +4,6 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 )
 
-// A Chunk is a 16x16x16 group of blocks
-type Chunk struct {
-	Position Vec3
-	Blocks   [][][]Block // x,y,z
-
-	// Render data
-	MeshLen int
-	VAO     uint32
-}
-
 type BlockFace int
 
 const (
@@ -30,6 +20,10 @@ type Block struct {
 }
 
 type BlockType struct {
+	// The registered name of this block type.
+	// It should be in the format of namespace:block
+	Name string
+
 	// If the block is transparent, then faces of another block that overlap
 	// with the faces of this block will still be rendered anyway.
 	//
@@ -76,7 +70,7 @@ func (d *Dimension) GetBlockAt(pos Vec3) Block {
 	x := FlooredRemainder(pos.X, 16)
 	y := FlooredRemainder(pos.Y, 16)
 	z := FlooredRemainder(pos.Z, 16)
-	return chk.Blocks[x][y][z]
+	return chk.GetBlockAt(NewVec3(x, y, z))
 }
 
 // Prevent a hashmap lookup if the pos falls within the given chunk
@@ -101,7 +95,7 @@ func (d *Dimension) GetBlockAtOptimised(pos Vec3, chunkGuess *Chunk) Block {
 	x := FlooredRemainder(pos.X, 16)
 	y := FlooredRemainder(pos.Y, 16)
 	z := FlooredRemainder(pos.Z, 16)
-	return chk.Blocks[x][y][z]
+	return chk.GetBlockAt(NewVec3(x, y, z))
 }
 
 func (d *Dimension) SetBlockAt(b Block, pos Vec3) {
@@ -118,7 +112,7 @@ func (d *Dimension) SetBlockAt(b Block, pos Vec3) {
 	x := FlooredRemainder(pos.X, 16)
 	y := FlooredRemainder(pos.Y, 16)
 	z := FlooredRemainder(pos.Z, 16)
-	chk.Blocks[x][y][z] = b
+	chk.SetBlockAt(NewVec3(x, y, z), b)
 }
 
 type World struct {

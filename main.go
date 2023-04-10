@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	_ "net/http/pprof"
 	"remakemc/client"
 	"remakemc/config"
+	"remakemc/server"
 )
 
 func main() {
@@ -16,9 +18,10 @@ func main() {
 		}()
 	}
 
-	if !config.App.PublicServer {
-		client.Start()
+	if config.App.PublicServer {
+		server.Start(fmt.Sprint(config.App.Server.Address, ":", config.App.Server.Port))
 	} else {
-
+		server.Start("localhost:53785")
+		client.Start()
 	}
 }

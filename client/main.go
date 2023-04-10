@@ -2,11 +2,14 @@ package client
 
 import (
 	"fmt"
+	"math/rand"
+	"net"
 	"remakemc/client/gui"
 	"remakemc/client/renderers"
 	"remakemc/config"
 	"remakemc/core"
 	"remakemc/core/blocks"
+	"remakemc/core/proto"
 	"runtime"
 	"runtime/debug"
 	"time"
@@ -14,7 +17,11 @@ import (
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/go-gl/mathgl/mgl32"
+	"github.com/vmihailenco/msgpack/v5"
 )
+
+var serverRead *msgpack.Decoder
+var serverWrite *msgpack.Encoder
 
 func Start() {
 	runtime.LockOSThread()
@@ -35,25 +42,64 @@ func Start() {
 	// Initialize gui elements
 	gui.Init()
 
+	// Join server
+	conn, err := net.DialTCP("tcp4", nil, &net.TCPAddr{
+		IP:   net.IPv4(127, 0, 0, 1),
+		Port: 53785,
+	})
+	if err != nil {
+		panic(err)
+	}
+	serverRead = msgpack.NewDecoder(conn)
+	serverWrite = msgpack.NewEncoder(conn)
+
+	// Send join event
+	err = serverWrite.Encode(proto.JOIN)
+	if err != nil {
+		panic(err)
+	}
+	err = serverWrite.Encode(proto.Join{
+		Username: fmt.Sprintf("test-%v", rand.Intn(100)),
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	// Read play event
+	var msgType int
+	err = serverRead.Decode(&msgType)
+	if err != nil {
+		panic(err)
+	}
+	if msgType != proto.PLAY {
+		panic("PLAY event must be first event when joining server")
+	}
+	var msg proto.Play
+	err = serverRead.Decode(&msg)
+	if err != nil {
+		panic(err)
+	}
+
 	// Initialize terrain
-	t := time.Now()
+	chunks := msg.GetChunks()
 	dim := &core.Dimension{
 		Chunks: make(map[core.Vec3]*core.Chunk),
 	}
-	for x := -16; x < 512+16; x += 16 {
-		for z := -16; z < 512+16; z += 16 {
-			GenTerrainColumn(core.NewVec3(x, 0, z), dim)
-		}
+	for _, v := range chunks {
+		dim.Chunks[v.Position] = v
 	}
-	fmt.Println("Generated initial terrain in", time.Since(t))
-	t = time.Now()
+
+	t := time.Now()
 	for _, v := range dim.Chunks {
 		renderers.MakeChunkVAO(dim, v)
 	}
 	fmt.Println("Generated initial terrain VAOs in", time.Since(t))
 
 	// Initialize player
-	player := NewPlayer(mgl32.Vec3{5.1, 70, 5.1})
+	player := NewPlayer(msg.Player.Pos)
+	player.LookAzimuth = msg.Player.LookAzimuth
+	player.LookElevation = msg.Player.LookElevation
+	player.Flying = msg.Player.Flying
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
 
 	// Initialize inputs

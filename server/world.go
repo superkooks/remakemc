@@ -1,15 +1,20 @@
-package client
+package server
 
 import (
 	"math/rand"
 	"remakemc/core"
 	"remakemc/core/blocks"
+	"sync"
 
 	"github.com/aquilax/go-perlin"
 )
 
 const RAND_SEED = 1337
 const WORLD_WIDTH = 65536
+
+// The current loaded dimension
+var Dim = &core.Dimension{Chunks: make(map[core.Vec3]*core.Chunk)}
+var DimLock = new(sync.Mutex)
 
 func GenTerrainColumn(chunkPos core.Vec3, dim *core.Dimension) {
 	perl := perlin.NewPerlinRandSource(2, 64, 3, rand.NewSource(RAND_SEED))

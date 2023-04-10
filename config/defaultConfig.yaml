@@ -9,6 +9,15 @@
     "client": {
         # The width & height the game window starts at
         "defaultwidth": 1920,
-        "defaultheight": 1080
+        "defaultheight": 1080,
+    },
+
+    "server": {
+        # The address a public server will bind to.
+        # If left empty, the server will bind to all interfaces.
+        "address": "",
+
+        # The port a public server will bind to
+        "port": 53785,
     }
 }

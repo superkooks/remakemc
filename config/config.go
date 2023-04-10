@@ -18,6 +18,11 @@ type AppConfig struct {
 		DefaultHeight int
 		DefaultWidth  int
 	}
+
+	Server struct {
+		Address string
+		Port    int
+	}
 }
 
 var App AppConfig

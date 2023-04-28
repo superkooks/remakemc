@@ -126,7 +126,15 @@ func (p *Player) ProcessMovement() {
 	groundAccel := float32(moveMult*p.Speed*math.Pow(0.6/slipperiness, 3)) * 0.1 * 20
 	direction := p.LookAzimuth
 	if moveMult != 0 {
-		direction -= math.Atan(float64(walkVec.Y() / walkVec.X()))
+		if walkVec.X() == 0 {
+			if walkVec.Y() < 0 {
+				direction += math.Pi / 2
+			} else {
+				direction -= math.Pi / 2
+			}
+		} else {
+			direction -= math.Atan(float64(walkVec.Y() / walkVec.X()))
+		}
 	}
 	if walkVec.X() < 0 {
 		direction += math.Pi

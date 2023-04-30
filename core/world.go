@@ -41,7 +41,7 @@ type RenderType interface {
 
 	// RenderFace should returns the data used for rendering, with the vertices
 	// returned in block space. i.e. from (0,0,0) to (1,1,1)
-	RenderFace(face BlockFace, pos mgl32.Vec3) (verts, normals, uvs []float32) // James Wray
+	RenderFace(face BlockFace, pos mgl32.Vec3) (verts, normals, uvs []float32)
 }
 
 type Dimension struct {

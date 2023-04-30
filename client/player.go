@@ -21,7 +21,7 @@ type Player struct {
 }
 
 func NewPlayer(position mgl32.Vec3) *Player {
-	p := &Player{Speed: 1, Entity: core.Entity{NoGravity: true, Position: position, AABB: mgl32.Vec3{0.6, 1.8, 0.6}}}
+	p := &Player{Speed: 1, Entity: core.Entity{Position: position, AABB: mgl32.Vec3{0.6, 1.8, 0.6}}}
 	return p
 }
 

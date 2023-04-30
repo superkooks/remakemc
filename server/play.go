@@ -17,7 +17,7 @@ func (c *Client) HandleJoin(j proto.Join) {
 	var msg proto.Play
 	msg.Player = proto.EntityPosition{
 		EntityID: uuid.New(),
-		Position: mgl32.Vec3{5, 95, 5},
+		Position: mgl32.Vec3{0, 95, 0},
 	}
 
 	// Determine the chunks to load

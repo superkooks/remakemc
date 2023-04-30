@@ -14,6 +14,8 @@ type AppConfig struct {
 	PublicServer bool
 	ServePprof   bool
 
+	RenderDistance int
+
 	Client struct {
 		DefaultHeight int
 		DefaultWidth  int

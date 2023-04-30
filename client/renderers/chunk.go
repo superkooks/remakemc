@@ -1,6 +1,8 @@
 package renderers
 
 import (
+	"fmt"
+	"remakemc/config"
 	"remakemc/core"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
@@ -121,7 +123,7 @@ void main() {
 	gl.GenerateMipmap(gl.TEXTURE_2D)
 }
 
-func RenderChunks(dim *core.Dimension, view mgl32.Mat4) {
+func RenderChunks(dim *core.Dimension, view mgl32.Mat4, playerPos mgl32.Vec3) {
 	gl.UseProgram(chunkProg)
 	gl.Enable(gl.CULL_FACE)
 	gl.Enable(gl.DEPTH_TEST)
@@ -141,17 +143,36 @@ func RenderChunks(dim *core.Dimension, view mgl32.Mat4) {
 	gl.BindTexture(gl.TEXTURE_2D, chunkTex)
 	gl.Uniform1i(chunkTUniform, int32(chunkTex-1))
 
-	for x := 0; x < 512; x += 16 {
+	i := 0
+	fmt.Println(playerPos)
+	chunkPos := core.NewVec3(
+		core.FlooredDivision(core.FloorFloat32(playerPos.X()), 16)*16,
+		0,
+		core.FlooredDivision(core.FloorFloat32(playerPos.Z()), 16)*16,
+	)
+	// fmt.Println("storing", len(dim.Chunks), "chunks")
+	for x := -config.App.RenderDistance * 16; x < config.App.RenderDistance*16; x += 16 {
 		for y := 0; y < 256; y += 16 {
-			for z := 0; z < 512; z += 16 {
-				RenderChunk(dim.Chunks[core.NewVec3(x, y, z)], view)
+			for z := -config.App.RenderDistance * 16; z < config.App.RenderDistance*16; z += 16 {
+				c := dim.Chunks[chunkPos.Add(core.NewVec3(x, y, z))]
+				if c == nil {
+					fmt.Println("nil chunk at", chunkPos.Add(core.NewVec3(x, y, z)))
+					panic("ahhhhh")
+				}
+				i++
+				RenderChunk(c, view)
 			}
 		}
 	}
+	// fmt.Println("rendered", i, "chunks")
 }
 
 func RenderChunk(c *core.Chunk, view mgl32.Mat4) {
 	if c.MeshLen == 0 {
+		if c.Position.Y == 0 {
+			fmt.Println(c.Position)
+			fmt.Println("skipping low chunk!!!")
+		}
 		return
 	}
 
@@ -165,52 +186,69 @@ func RenderChunk(c *core.Chunk, view mgl32.Mat4) {
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(c.MeshLen))
 }
 
-func MakeChunkVAO(d *core.Dimension, chunk *core.Chunk) {
+func MakeChunkMeshAndVAO(d *core.Dimension, chunk *core.Chunk) {
+	mesh, normals, uvs, lightLevels := MakeChunkMesh(d, chunk.Position)
+	MakeChunkVAO(chunk, mesh, normals, uvs, lightLevels)
+}
+
+func MakeChunkVAO(chunk *core.Chunk, mesh, normals, uvs, lightLevels []float32) {
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
-
-	var mesh, normals, uvs, lightLevels []float32
-	mesh, normals, uvs, lightLevels = MakeChunkMesh(d, chunk.Position)
-	chunk.MeshLen = len(mesh)
 
 	if len(mesh) == 0 {
 		return
 	}
 
+	buf := GlBufferFrom(mesh)
+	chunk.VertexBuffers = append(chunk.VertexBuffers, buf)
 	gl.EnableVertexAttribArray(0)
-	gl.BindBuffer(gl.ARRAY_BUFFER, GlBufferFrom(mesh))
+	gl.BindBuffer(gl.ARRAY_BUFFER, buf)
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, nil) // vec3
 
+	buf = GlBufferFrom(normals)
+	chunk.VertexBuffers = append(chunk.VertexBuffers, buf)
 	gl.EnableVertexAttribArray(1)
-	gl.BindBuffer(gl.ARRAY_BUFFER, GlBufferFrom(normals))
+	gl.BindBuffer(gl.ARRAY_BUFFER, buf)
 	gl.VertexAttribPointer(1, 3, gl.FLOAT, false, 0, nil) // vec3
 
+	buf = GlBufferFrom(uvs)
+	chunk.VertexBuffers = append(chunk.VertexBuffers, buf)
 	gl.EnableVertexAttribArray(2)
-	gl.BindBuffer(gl.ARRAY_BUFFER, GlBufferFrom(uvs))
+	gl.BindBuffer(gl.ARRAY_BUFFER, buf)
 	gl.VertexAttribPointer(2, 2, gl.FLOAT, false, 0, nil) // vec2
 
+	buf = GlBufferFrom(lightLevels)
+	chunk.VertexBuffers = append(chunk.VertexBuffers, buf)
 	gl.EnableVertexAttribArray(3)
-	gl.BindBuffer(gl.ARRAY_BUFFER, GlBufferFrom(lightLevels))
+	gl.BindBuffer(gl.ARRAY_BUFFER, buf)
 	gl.VertexAttribPointer(3, 1, gl.FLOAT, false, 0, nil) // float
 
 	chunk.VAO = vao
+	chunk.MeshLen = len(mesh)
+}
+
+func FreeChunk(c *core.Chunk) {
+	gl.DeleteVertexArrays(1, &c.VAO)
+	if len(c.VertexBuffers) > 0 {
+		gl.DeleteBuffers(int32(len(c.VertexBuffers)), &c.VertexBuffers[0])
+	}
 }
 
 func UpdateRequiredMeshes(dim *core.Dimension, updatePos core.Vec3) {
-	MakeChunkVAO(dim, dim.GetChunkContaining(updatePos))
+	MakeChunkMeshAndVAO(dim, dim.GetChunkContaining(updatePos))
 
 	// X
 	if core.FlooredRemainder(updatePos.X, 16) == 15 {
 		chk := dim.GetChunkContaining(updatePos.Add(core.Vec3{X: 1}))
 		if chk != nil {
-			MakeChunkVAO(dim, chk)
+			MakeChunkMeshAndVAO(dim, chk)
 		}
 	}
 	if core.FlooredRemainder(updatePos.X, 16) == 0 {
 		chk := dim.GetChunkContaining(updatePos.Add(core.Vec3{X: -1}))
 		if chk != nil {
-			MakeChunkVAO(dim, chk)
+			MakeChunkMeshAndVAO(dim, chk)
 		}
 	}
 
@@ -218,13 +256,13 @@ func UpdateRequiredMeshes(dim *core.Dimension, updatePos core.Vec3) {
 	if core.FlooredRemainder(updatePos.Y, 16) == 15 {
 		chk := dim.GetChunkContaining(updatePos.Add(core.Vec3{Y: 1}))
 		if chk != nil {
-			MakeChunkVAO(dim, chk)
+			MakeChunkMeshAndVAO(dim, chk)
 		}
 	}
 	if core.FlooredRemainder(updatePos.Y, 16) == 0 {
 		chk := dim.GetChunkContaining(updatePos.Add(core.Vec3{Y: -1}))
 		if chk != nil {
-			MakeChunkVAO(dim, chk)
+			MakeChunkMeshAndVAO(dim, chk)
 		}
 	}
 
@@ -232,13 +270,13 @@ func UpdateRequiredMeshes(dim *core.Dimension, updatePos core.Vec3) {
 	if core.FlooredRemainder(updatePos.Z, 16) == 15 {
 		chk := dim.GetChunkContaining(updatePos.Add(core.Vec3{Z: 1}))
 		if chk != nil {
-			MakeChunkVAO(dim, chk)
+			MakeChunkMeshAndVAO(dim, chk)
 		}
 	}
 	if core.FlooredRemainder(updatePos.Z, 16) == 0 {
 		chk := dim.GetChunkContaining(updatePos.Add(core.Vec3{Z: -1}))
 		if chk != nil {
-			MakeChunkVAO(dim, chk)
+			MakeChunkMeshAndVAO(dim, chk)
 		}
 	}
 }

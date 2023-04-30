@@ -4,6 +4,7 @@ import (
 	"math"
 	"remakemc/client/renderers"
 	"remakemc/core"
+	"remakemc/core/proto"
 
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/go-gl/mathgl/mgl32"
@@ -12,26 +13,24 @@ import (
 type Player struct {
 	core.Entity
 
-	// Whether the player is Creative mode flying
-	Flying    bool
 	Sprinting bool
 	Sneaking  bool
-
-	LookAzimuth   float64
-	LookElevation float64
 
 	Speed           float64
 	MouseSensitivty float64
 }
 
 func NewPlayer(position mgl32.Vec3) *Player {
-	p := &Player{Speed: 1, Entity: core.Entity{Position: position, AABB: mgl32.Vec3{0.6, 1.8, 0.6}}}
-	p.TickCallback = p.ProcessMovement
+	p := &Player{Speed: 1, Entity: core.Entity{NoGravity: true, Position: position, AABB: mgl32.Vec3{0.6, 1.8, 0.6}}}
 	return p
 }
 
 // The position of the camera
 func (p *Player) CameraPos() mgl32.Vec3 {
+	if p.Sneaking {
+		return p.Position.Add(mgl32.Vec3{0.3, 1.34, 0.3})
+	}
+
 	return p.Position.Add(mgl32.Vec3{0.3, 1.62, 0.3})
 }
 
@@ -57,26 +56,47 @@ func (p *Player) RightVec() mgl32.Vec3 {
 	}
 }
 
+func (p *Player) SetSneaking(b bool) {
+	p.Sneaking = b
+	if b {
+		p.AABB[1] = 1.5
+	} else {
+		p.AABB[1] = 1.8
+	}
+}
+
 // Process the keyboard input and physics for this frame
-func (p *Player) ProcessMovement() {
+func (p *Player) DoTick() {
+	p.Entity.DoTick()
+
 	// Jump
 	var jumping bool
 	if renderers.Win.GetKey(glfw.KeySpace) == glfw.Press && p.OnGround() {
 		// TODO Add timeout to next jump
 		p.Velocity[1] = 8.4
 		jumping = true
+		serverWrite.Encode(proto.PLAYER_JUMP)
 	}
 
 	// Sneak
 	if renderers.Win.GetKey(glfw.KeyLeftShift) == glfw.Press {
-		p.Sneaking = true
-	} else {
-		p.Sneaking = false
+		// Nested for a reason
+		if !p.Sneaking {
+			p.SetSneaking(true)
+			serverWrite.Encode(proto.PLAYER_SNEAKING)
+			serverWrite.Encode(proto.PlayerSneaking(true))
+		}
+	} else if p.Sneaking {
+		p.SetSneaking(false)
+		serverWrite.Encode(proto.PLAYER_SNEAKING)
+		serverWrite.Encode(proto.PlayerSneaking(false))
 	}
 
 	// Sprint
-	if renderers.Win.GetKey(glfw.KeyLeftControl) == glfw.Press {
+	if renderers.Win.GetKey(glfw.KeyLeftControl) == glfw.Press && !p.Sprinting {
 		p.Sprinting = true
+		serverWrite.Encode(proto.PLAYER_SPRINTING)
+		serverWrite.Encode(proto.PlayerSprinting(true))
 	}
 
 	var walkVec mgl32.Vec2
@@ -98,8 +118,10 @@ func (p *Player) ProcessMovement() {
 		walkVec[1] += -1
 	}
 
-	if walkVec.X() == 0 {
+	if (walkVec.X() == 0 || p.Sneaking) && p.Sprinting {
 		p.Sprinting = false
+		serverWrite.Encode(proto.PLAYER_SPRINTING)
+		serverWrite.Encode(proto.PlayerSprinting(false))
 	}
 
 	// Procees horizontal velocity according to
@@ -161,6 +183,13 @@ func (p *Player) ProcessMovement() {
 		p.Velocity[2] += 0.02 * float32(moveMult*math.Cos(direction)*20)
 	}
 
+	serverWrite.Encode(proto.PLAYER_POSITION)
+	serverWrite.Encode(proto.PlayerPosition{
+		Position:      p.Position,
+		Yaw:           p.Yaw,
+		LookAzimuth:   p.LookAzimuth,
+		LookElevation: p.LookElevation,
+	})
 }
 
 // Process the mouse input for this frame

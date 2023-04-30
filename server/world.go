@@ -13,8 +13,7 @@ const RAND_SEED = 1337
 const WORLD_WIDTH = 65536
 
 // The current loaded dimension
-var Dim = &core.Dimension{Chunks: make(map[core.Vec3]*core.Chunk)}
-var DimLock = new(sync.Mutex)
+var Dim = &core.Dimension{Chunks: make(map[core.Vec3]*core.Chunk), Lock: new(sync.RWMutex)}
 
 func GenTerrainColumn(chunkPos core.Vec3, dim *core.Dimension) {
 	perl := perlin.NewPerlinRandSource(2, 64, 3, rand.NewSource(RAND_SEED))
@@ -55,4 +54,16 @@ func GenTerrainColumn(chunkPos core.Vec3, dim *core.Dimension) {
 
 		dim.Chunks[chk.Position] = chk
 	}
+}
+
+// You must lock Dim yourself
+func GetChunkOrGen(pos core.Vec3) *core.Chunk {
+	c, ok := Dim.Chunks[pos]
+	if ok {
+		return c
+	}
+
+	GenTerrainColumn(core.NewVec3(pos.X, 0, pos.Z), Dim)
+
+	return Dim.Chunks[pos]
 }

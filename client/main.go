@@ -12,6 +12,7 @@ import (
 	"remakemc/core/proto"
 	"runtime"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
@@ -20,8 +21,17 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-var serverRead *msgpack.Decoder
+var serverRead chan interface{}
 var serverWrite *msgpack.Encoder
+var conn *net.TCPConn
+
+type meshDone struct {
+	position    core.Vec3
+	mesh        []float32
+	normals     []float32
+	uvs         []float32
+	lightLevels []float32
+}
 
 func Start() {
 	runtime.LockOSThread()
@@ -43,14 +53,15 @@ func Start() {
 	gui.Init()
 
 	// Join server
-	conn, err := net.DialTCP("tcp4", nil, &net.TCPAddr{
+	var err error
+	conn, err = net.DialTCP("tcp4", nil, &net.TCPAddr{
 		IP:   net.IPv4(127, 0, 0, 1),
 		Port: 53785,
 	})
 	if err != nil {
 		panic(err)
 	}
-	serverRead = msgpack.NewDecoder(conn)
+	serverRead = make(chan interface{}, 32)
 	serverWrite = msgpack.NewEncoder(conn)
 
 	// Send join event
@@ -65,24 +76,54 @@ func Start() {
 		panic(err)
 	}
 
+	// Read from network in separate thread
+	go func() {
+		d := msgpack.NewDecoder(conn)
+		for {
+			var msgType int
+			err := d.Decode(&msgType)
+			if err != nil {
+				panic(err)
+			}
+
+			switch msgType {
+			case proto.PLAY:
+				var data proto.Play
+				err = d.Decode(&data)
+				if err != nil {
+					panic(err)
+				}
+				serverRead <- data
+
+			case proto.LOAD_CHUNKS:
+				var data proto.LoadChunks
+				err = d.Decode(&data)
+				if err != nil {
+					panic(err)
+				}
+				serverRead <- data
+
+			case proto.UNLOAD_CHUNKS:
+				var data proto.UnloadChunks
+				err = d.Decode(&data)
+				if err != nil {
+					panic(err)
+				}
+				serverRead <- data
+
+			default:
+				panic("unknown packet type")
+			}
+		}
+	}()
+
 	// Read play event
-	var msgType int
-	err = serverRead.Decode(&msgType)
-	if err != nil {
-		panic(err)
-	}
-	if msgType != proto.PLAY {
-		panic("PLAY event must be first event when joining server")
-	}
-	var msg proto.Play
-	err = serverRead.Decode(&msg)
-	if err != nil {
-		panic(err)
-	}
+	msg := (<-serverRead).(proto.Play)
 
 	// Initialize terrain
-	chunks := msg.GetChunks()
+	chunks := msg.InitialChunks.GetChunks()
 	dim := &core.Dimension{
+		Lock:   new(sync.RWMutex),
 		Chunks: make(map[core.Vec3]*core.Chunk),
 	}
 	for _, v := range chunks {
@@ -91,30 +132,35 @@ func Start() {
 
 	t := time.Now()
 	for _, v := range dim.Chunks {
-		renderers.MakeChunkVAO(dim, v)
+		renderers.MakeChunkMeshAndVAO(dim, v)
 	}
 	fmt.Println("Generated initial terrain VAOs in", time.Since(t))
 
 	// Initialize player
-	player := NewPlayer(msg.Player.Pos)
+	player := NewPlayer(msg.Player.Position)
 	player.LookAzimuth = msg.Player.LookAzimuth
 	player.LookElevation = msg.Player.LookElevation
-	player.Flying = msg.Player.Flying
+	player.Yaw = msg.Player.Yaw
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
 
 	// Initialize inputs
 	mouseOne := new(core.Debounced)
 	mouseTwo := new(core.Debounced)
 
+	// Get all tickers
+	var allTickers []core.Tickable
+	allTickers = append(allTickers, player)
+
 	// Game loop
 	previousTime := glfw.GetTime()
 	var frames int
 	var cumulativeTime float64
+	var collectedDelta float64
 	for !renderers.Win.ShouldClose() {
 		// Get delta time
-		time := glfw.GetTime()
-		deltaTime := time - previousTime
-		previousTime = time
+		windowTime := glfw.GetTime()
+		deltaTime := windowTime - previousTime
+		previousTime = windowTime
 
 		// Calculate frame rate
 		frames++
@@ -137,6 +183,14 @@ func Start() {
 			player.CameraPos().Add(player.LookDir()), // and looks at
 			mgl32.Vec3{0, 1, 0},                      // Head is up
 		)
+
+		// See if we need to do a game tick
+		collectedDelta += deltaTime
+		for ; collectedDelta >= 1.0/20; collectedDelta -= 1.0 / 20 {
+			for _, v := range allTickers {
+				v.DoTick()
+			}
+		}
 
 		// Mining
 		if renderers.Win.GetMouseButton(glfw.MouseButton1) == glfw.Press && mouseOne.Invoke() {
@@ -191,7 +245,7 @@ func Start() {
 		}
 
 		// Render terrain
-		renderers.RenderChunks(dim, view)
+		renderers.RenderChunks(dim, view, player.Position)
 
 		// Find selector position and render
 		core.TraceRay(player.LookDir(), player.CameraPos(), 16, func(v, _ mgl32.Vec3) (stop bool) {
@@ -210,5 +264,46 @@ func Start() {
 		// Update window
 		glfw.PollEvents()
 		renderers.Win.SwapBuffers()
+
+		// Read from network
+	outer:
+		for {
+			select {
+			case m := <-serverRead:
+				switch msg := m.(type) {
+				case proto.UnloadChunks:
+					dim.Lock.Lock()
+					for _, v := range msg {
+						fmt.Println("unloading chunk", v)
+						renderers.FreeChunk(dim.Chunks[v])
+						delete(dim.Chunks, v)
+					}
+					dim.Lock.Unlock()
+
+				case proto.LoadChunks:
+					dim.Lock.Lock()
+					chunks := msg.GetChunks()
+					for _, v := range chunks {
+						dim.Chunks[v.Position] = v
+					}
+					dim.Lock.Unlock()
+					for _, v := range chunks {
+						go func(c *core.Chunk) {
+							dim.Lock.RLock()
+							mesh, normals, uvs, lightLevels := renderers.MakeChunkMesh(dim, c.Position)
+							dim.Lock.RUnlock()
+							serverRead <- meshDone{position: c.Position, mesh: mesh, normals: normals, uvs: uvs, lightLevels: lightLevels}
+						}(v)
+					}
+
+				case meshDone:
+					c := dim.Chunks[msg.position]
+					renderers.MakeChunkVAO(c, msg.mesh, msg.normals, msg.uvs, msg.lightLevels)
+
+				}
+			default:
+				break outer
+			}
+		}
 	}
 }

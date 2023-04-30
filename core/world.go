@@ -1,6 +1,8 @@
 package core
 
 import (
+	"sync"
+
 	"github.com/go-gl/mathgl/mgl32"
 )
 
@@ -43,6 +45,8 @@ type RenderType interface {
 }
 
 type Dimension struct {
+	Lock *sync.RWMutex
+
 	// Chunks are all the loaded chunks, addressed by their starting coordinates.
 	// A chunk starts at (0,0,0) and ends at (16,16,16)
 	Chunks map[Vec3]*Chunk
@@ -117,4 +121,12 @@ func (d *Dimension) SetBlockAt(b Block, pos Vec3) {
 
 type World struct {
 	Dimensions map[string]Dimension
+}
+
+type Tickable interface {
+	DoTick()
+}
+
+type RandomTickable interface {
+	DoRandomTick()
 }

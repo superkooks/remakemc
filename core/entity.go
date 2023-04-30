@@ -12,14 +12,14 @@ type Entity struct {
 	AABB      mgl32.Vec3 // AABB cannot be < 0
 	NoGravity bool
 
-	// A callback that happens at each physics tick (not update)
-	// Used for custom processing
-	TickCallback func()
-
 	Velocity mgl32.Vec3 // in m/s
 
-	onGround       bool
-	collectedDelta float64
+	Yaw           float64
+	Pitch         float64
+	LookAzimuth   float64
+	LookElevation float64
+
+	onGround bool
 }
 
 func (e *Entity) PhysicsUpdate(deltaT float64, dim *Dimension) {
@@ -147,18 +147,11 @@ func (e *Entity) PhysicsUpdate(deltaT float64, dim *Dimension) {
 	} else if e.Velocity.Y() != 0 {
 		e.onGround = false
 	}
-
-	// See if we need to do a physics tick
-	e.collectedDelta += deltaT
-	for ; e.collectedDelta >= 1.0/20; e.collectedDelta -= 1.0 / 20 {
-		e.PhysicsTick()
-		e.TickCallback()
-	}
 }
 
 // Physics ticks happen at 20Hz, whereas physics updates are dependent
 // on the deltaT
-func (e *Entity) PhysicsTick() {
+func (e *Entity) DoTick() {
 	if !e.NoGravity {
 		// Update the entity's velocity based on the minecraft movement formula
 		// https://www.mcpk.wiki/wiki/Vertical_Movement_Formulas

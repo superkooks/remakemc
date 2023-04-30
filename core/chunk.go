@@ -5,8 +5,9 @@ type Chunk struct {
 	Position Vec3
 
 	// Render data
-	MeshLen int
-	VAO     uint32
+	MeshLen       int
+	VAO           uint32
+	VertexBuffers []uint32
 
 	// Block data is stored using a palette, to save memory
 	// NB: This data should never be accessed manually, except for

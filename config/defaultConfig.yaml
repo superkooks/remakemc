@@ -6,6 +6,9 @@
     # Serve pprof on localhost:6060. Used for debugging.
     "servepprof": false,
 
+    # The radius of chunks around the player that will be rendered, measured in chunks.
+    "renderdistance": 10,
+
     "client": {
         # The width & height the game window starts at
         "defaultwidth": 1920,

@@ -13,6 +13,12 @@ import (
 type Client struct {
 	Conn    *net.TCPConn
 	encoder *msgpack.Encoder
+
+	Username    string
+	Position    proto.PlayerPosition
+	OldPosition proto.PlayerPosition
+
+	loadedChunks []core.Vec3
 }
 
 func (c *Client) Listen() {
@@ -34,20 +40,58 @@ func (c *Client) Listen() {
 			}
 
 			c.HandleJoin(j)
+
+		case proto.PLAYER_JUMP:
+			fmt.Println(c.Username, "jumped")
+
+		case proto.PLAYER_SNEAKING:
+			var s proto.PlayerSneaking
+			err := d.Decode(&s)
+			if err != nil {
+				panic(err)
+			}
+
+			if s {
+				fmt.Println(c.Username, "started sneaking")
+			} else {
+				fmt.Println(c.Username, "stopped sneaking")
+			}
+
+		case proto.PLAYER_SPRINTING:
+			var s proto.PlayerSprinting
+			err := d.Decode(&s)
+			if err != nil {
+				panic(err)
+			}
+
+			if s {
+				fmt.Println(c.Username, "started sprinting")
+			} else {
+				fmt.Println(c.Username, "stopped sprinting")
+			}
+
+		case proto.PLAYER_POSITION:
+			var p proto.PlayerPosition
+			err := d.Decode(&p)
+			if err != nil {
+				panic(err)
+			}
+
+			c.HandlePlayerPosition(p)
 		}
 	}
 }
 
 func Start(addr string) {
 	// Generate terrain
-	DimLock.Lock()
+	Dim.Lock.Lock()
 	t := time.Now()
 	for x := -16; x < 512+16; x += 16 {
 		for z := -16; z < 512+16; z += 16 {
 			GenTerrainColumn(core.NewVec3(x, 0, z), Dim)
 		}
 	}
-	DimLock.Unlock()
+	Dim.Lock.Unlock()
 	fmt.Println("Generated initial terrain in", time.Since(t))
 
 	go func() {

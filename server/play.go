@@ -11,6 +11,7 @@ import (
 )
 
 func (c *Client) HandleJoin(j proto.Join) {
+	fmt.Println("join event")
 	c.Username = j.Username
 
 	// Reply with a play event
@@ -19,6 +20,8 @@ func (c *Client) HandleJoin(j proto.Join) {
 		EntityID: uuid.New(),
 		Position: mgl32.Vec3{0, 95, 0},
 	}
+	c.OldPosition = proto.PlayerPosition(msg.Player)
+	c.Position = proto.PlayerPosition(msg.Player)
 
 	// Determine the chunks to load
 	Dim.Lock.Lock()
@@ -44,9 +47,39 @@ func (c *Client) HandleJoin(j proto.Join) {
 
 	c.encoder.Encode(proto.PLAY)
 	c.encoder.Encode(msg)
+
+	// Update all clients
+	fmt.Println("no. of clients", len(clients))
+	for _, v := range clients {
+		if v != c {
+			fmt.Println("updating old client", c.Position.EntityID, "of new player", v.Position.EntityID)
+			v.encoder.Encode(proto.ENTITY_CREATE)
+			v.encoder.Encode(proto.EntityCreate{
+				EntityPosition: msg.Player,
+				EntityType:     "mc:remoteplayer",
+			})
+		}
+	}
+
+	// Update client of all entities
+	for _, v := range clients {
+		if v != c {
+			fmt.Println("updating new client of player", v.Position.EntityID)
+			c.encoder.Encode(proto.ENTITY_CREATE)
+			c.encoder.Encode(proto.EntityCreate{
+				EntityPosition: proto.EntityPosition(v.Position),
+				EntityType:     "mc:remoteplayer",
+			})
+		}
+	}
 }
 
 func (c *Client) HandlePlayerPosition(p proto.PlayerPosition) {
+	// TODO Check whether the player's position is valid
+	// TODO Rubberband player
+
+	p.EntityID = c.OldPosition.EntityID
+
 	c.OldPosition = c.Position
 	c.Position = p
 
@@ -113,4 +146,13 @@ func (c *Client) HandlePlayerPosition(p proto.PlayerPosition) {
 		c.loadedChunks = allChunks
 	}
 	Dim.Lock.Unlock()
+
+	// Update all clients
+	for _, v := range clients {
+		if v != c {
+			v.encoder.Encode(proto.ENTITY_POSITION)
+			v.encoder.Encode(p)
+		}
+	}
+
 }

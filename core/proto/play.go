@@ -32,9 +32,15 @@ type EntityPosition struct {
 	Position mgl32.Vec3
 	Yaw      float64
 	Pitch    float64
+	AABB     mgl32.Vec3
 
 	LookAzimuth   float64
 	LookElevation float64
+}
+
+type EntityCreate struct {
+	EntityPosition
+	EntityType string
 }
 
 // Instructs the client to unload the chunk

@@ -32,10 +32,10 @@ type BlockType struct {
 	// This value should be true if the player can see through the block in
 	// any way, or if the block does not take up the full area.
 	Transparent bool
-	RenderType  RenderType
+	RenderType  RenderBlockType
 }
 
-type RenderType interface {
+type RenderBlockType interface {
 	// Load textures into atlas, etc.
 	Init()
 
@@ -50,6 +50,8 @@ type Dimension struct {
 	// Chunks are all the loaded chunks, addressed by their starting coordinates.
 	// A chunk starts at (0,0,0) and ends at (16,16,16)
 	Chunks map[Vec3]*Chunk
+
+	Entities []*Entity
 }
 
 func (d *Dimension) GetChunkContaining(pos Vec3) *Chunk {

@@ -1,16 +1,24 @@
 package core
 
 import (
+	"time"
+
 	"github.com/go-gl/mathgl/mgl32"
+	"github.com/google/uuid"
 )
 
 // Minecraft has some significant gravity, apparently
 var GRAVITY = mgl32.Vec3{0, -32, 0}
 
 type Entity struct {
-	Position  mgl32.Vec3
-	AABB      mgl32.Vec3 // AABB cannot be < 0
-	NoGravity bool
+	ID         uuid.UUID
+	Position   mgl32.Vec3
+	AABB       mgl32.Vec3 // AABB cannot be < 0
+	NoGravity  bool
+	EntityType string
+
+	// Disables physics and uses linear interpolation instead
+	Lerp bool
 
 	Velocity mgl32.Vec3 // in m/s
 
@@ -20,9 +28,44 @@ type Entity struct {
 	LookElevation float64
 
 	onGround bool
+
+	lerpStartPos  mgl32.Vec3
+	lerpStartTime time.Time
+	lerpEndPos    mgl32.Vec3
+	lerpEndTime   time.Time
 }
 
-func (e *Entity) PhysicsUpdate(deltaT float64, dim *Dimension) {
+type EntityType struct {
+	Name       string
+	RenderType RenderEntityType
+}
+
+type RenderEntityType interface {
+	Init()
+	RenderEntity(e *Entity, view mgl32.Mat4)
+}
+
+func (e *Entity) NewLerp(end mgl32.Vec3) {
+	e.lerpStartPos = e.lerpEndPos
+	e.lerpStartTime = e.lerpEndTime
+	e.lerpEndPos = end
+	e.lerpEndTime = time.Now()
+}
+
+func (e *Entity) DoUpdate(deltaT float64, dim *Dimension) {
+	// If lerping, do lerp
+	if e.Lerp {
+		lerpDelta := e.lerpEndTime.Sub(e.lerpStartTime)
+		scalar := time.Since(e.lerpEndTime) / lerpDelta
+
+		dir := e.lerpEndPos.Sub(e.lerpStartPos)
+		e.Position = dir.Mul(float32(scalar))
+
+		return
+	}
+
+	// Otherwise, use physics
+
 	// Move the player according to the current velocity
 	e.Position = e.Position.Add(e.Velocity.Mul(float32(deltaT)))
 

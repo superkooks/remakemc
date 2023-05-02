@@ -21,6 +21,8 @@ type Client struct {
 	loadedChunks []core.Vec3
 }
 
+var clients []*Client
+
 func (c *Client) Listen() {
 	d := msgpack.NewDecoder(c.Conn)
 	c.encoder = msgpack.NewEncoder(c.Conn)
@@ -113,6 +115,7 @@ func Start(addr string) {
 			}
 
 			c := &Client{Conn: conn}
+			clients = append(clients, c)
 			go c.Listen()
 		}
 	}()

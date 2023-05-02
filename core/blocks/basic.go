@@ -7,20 +7,20 @@ import (
 
 var Grass = core.AddBlockToRegistry(&core.BlockType{
 	Name:       "mc:grass",
-	RenderType: renderers.BasicOneTex{Tex: "grass"},
+	RenderType: renderers.BlockBasicOneTex{Tex: "grass"},
 })
 
 var Dirt = core.AddBlockToRegistry(&core.BlockType{
 	Name:       "mc:dirt",
-	RenderType: renderers.BasicOneTex{Tex: "dirt"},
+	RenderType: renderers.BlockBasicOneTex{Tex: "dirt"},
 })
 
 var Stone = core.AddBlockToRegistry(&core.BlockType{
 	Name:       "mc:stone",
-	RenderType: renderers.BasicOneTex{Tex: "stone"},
+	RenderType: renderers.BlockBasicOneTex{Tex: "stone"},
 })
 
 var Cobblestone = core.AddBlockToRegistry(&core.BlockType{
 	Name:       "mc:cobblestone",
-	RenderType: renderers.BasicOneTex{Tex: "cobblestone"},
+	RenderType: renderers.BlockBasicOneTex{Tex: "cobblestone"},
 })

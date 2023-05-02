@@ -9,6 +9,7 @@ import (
 	"remakemc/config"
 	"remakemc/core"
 	"remakemc/core/blocks"
+	_ "remakemc/core/entities"
 	"remakemc/core/proto"
 	"runtime"
 	"runtime/debug"
@@ -55,7 +56,7 @@ func Start() {
 	// Join server
 	var err error
 	conn, err = net.DialTCP("tcp4", nil, &net.TCPAddr{
-		IP:   net.IPv4(127, 0, 0, 1),
+		IP:   net.IPv4(192, 168, 73, 215),
 		Port: 53785,
 	})
 	if err != nil {
@@ -111,6 +112,24 @@ func Start() {
 				}
 				serverRead <- data
 
+			case proto.ENTITY_CREATE:
+				fmt.Println("received entity create")
+
+				var data proto.EntityCreate
+				err = d.Decode(&data)
+				if err != nil {
+					panic(err)
+				}
+				serverRead <- data
+
+			case proto.ENTITY_POSITION:
+				var data proto.EntityPosition
+				err = d.Decode(&data)
+				if err != nil {
+					panic(err)
+				}
+				serverRead <- data
+
 			default:
 				panic("unknown packet type")
 			}
@@ -137,7 +156,7 @@ func Start() {
 	fmt.Println("Generated initial terrain VAOs in", time.Since(t))
 
 	// Initialize player
-	player := NewPlayer(msg.Player.Position)
+	player := NewPlayer(msg.Player.Position, msg.Player.EntityID)
 	player.LookAzimuth = msg.Player.LookAzimuth
 	player.LookElevation = msg.Player.LookElevation
 	player.Yaw = msg.Player.Yaw
@@ -177,12 +196,17 @@ func Start() {
 
 		// Process user input and recalculate view matrix
 		player.ProcessMousePosition(deltaTime)
-		player.PhysicsUpdate(deltaTime, dim)
+		player.DoUpdate(deltaTime, dim)
 		view := mgl32.LookAtV(
 			player.CameraPos(),                       // Camera is at ... in World Space
 			player.CameraPos().Add(player.LookDir()), // and looks at
 			mgl32.Vec3{0, 1, 0},                      // Head is up
 		)
+
+		// Update entities
+		for _, v := range dim.Entities {
+			v.DoUpdate(deltaTime, dim)
+		}
 
 		// See if we need to do a game tick
 		collectedDelta += deltaTime
@@ -261,6 +285,11 @@ func Start() {
 		// Render gui
 		gui.RenderGame()
 
+		// Render all entities
+		for _, v := range dim.Entities {
+			core.EntityRegistry[v.EntityType].RenderType.RenderEntity(v, view)
+		}
+
 		// Update window
 		glfw.PollEvents()
 		renderers.Win.SwapBuffers()
@@ -296,9 +325,45 @@ func Start() {
 						}(v)
 					}
 
+				// Special internal event used to transfer mesh data generated in thread
 				case meshDone:
 					c := dim.Chunks[msg.position]
 					renderers.MakeChunkVAO(c, msg.mesh, msg.normals, msg.uvs, msg.lightLevels)
+
+				case proto.EntityCreate:
+					dim.Entities = append(dim.Entities, &core.Entity{
+						ID:         msg.EntityID,
+						Position:   msg.Position,
+						AABB:       msg.AABB,
+						EntityType: msg.EntityType,
+						// Lerp: true,
+						Yaw:           msg.Yaw,
+						Pitch:         msg.Pitch,
+						LookAzimuth:   msg.LookAzimuth,
+						LookElevation: msg.LookElevation,
+					})
+
+				case proto.EntityPosition:
+					if msg.EntityID == player.ID {
+						// Update the player's position absolutely.
+						// Only happens when server thinks divergence is too high.
+						// Will cause a rubberband
+						player.Position = msg.Position
+					} else {
+						// Find the entity by ID
+						for _, v := range dim.Entities {
+							if v.ID == msg.EntityID {
+								// Update
+								v.LookAzimuth = msg.LookAzimuth
+								v.LookElevation = msg.LookElevation
+								v.Position = msg.Position
+								v.Yaw = msg.Yaw
+
+								// TODO Add lerp
+								// v.NewLerp(msg.Position)
+							}
+						}
+					}
 
 				}
 			default:

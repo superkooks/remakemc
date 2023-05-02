@@ -27,6 +27,7 @@ func InitAll(width, height int) {
 	initGUI()
 	initChunk()
 	initSelector()
+	initEntity()
 }
 
 func GetAspectRatio() float32 {

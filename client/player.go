@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/go-gl/mathgl/mgl32"
+	"github.com/google/uuid"
 )
 
 type Player struct {
@@ -20,8 +21,12 @@ type Player struct {
 	MouseSensitivty float64
 }
 
-func NewPlayer(position mgl32.Vec3) *Player {
-	p := &Player{Speed: 1, Entity: core.Entity{Position: position, AABB: mgl32.Vec3{0.6, 1.8, 0.6}}}
+func NewPlayer(position mgl32.Vec3, entityID uuid.UUID) *Player {
+	p := &Player{Speed: 1, Entity: core.Entity{
+		ID:       entityID,
+		Position: position,
+		AABB:     mgl32.Vec3{0.6, 1.8, 0.6}},
+	}
 	return p
 }
 

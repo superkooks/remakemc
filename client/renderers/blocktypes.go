@@ -6,19 +6,19 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 )
 
-type BasicOneTex struct {
+type BlockBasicOneTex struct {
 	Tex string
 }
 
-func (t BasicOneTex) Init() {
+func (t BlockBasicOneTex) Init() {
 	BlockAtlas.AddTexFromAssets(t.Tex)
 }
 
-func (t BasicOneTex) RenderFace(face core.BlockFace, pos mgl32.Vec3) (verts, normals, uvs []float32) {
+func (t BlockBasicOneTex) RenderFace(face core.BlockFace, pos mgl32.Vec3) (verts, normals, uvs []float32) {
 	atlasStart, atlasEnd := BlockAtlas.GetUV(t.Tex)
 
 	verts = makeFace(faceVertices[face], pos)
-	normals = makeNormals(verts)
+	normals = MakeNormals(verts)
 	uvs = makeUVs(faceUVs[face], atlasStart, atlasEnd)
 
 	return
@@ -38,9 +38,9 @@ func makeFace(face []float32, pos mgl32.Vec3) []float32 {
 }
 
 // Generate the normals for a face
-func makeNormals(newV []float32) []float32 {
-	normals := make([]float32, 18)
-	for i := 0; i < 2; i++ {
+func MakeNormals(newV []float32) []float32 {
+	normals := make([]float32, len(newV))
+	for i := 0; i < len(newV)/9; i++ {
 		vecV := mgl32.Vec3{newV[3+i*9] - newV[0+i*9], newV[4+i*9] - newV[1+i*9], newV[5+i*9] - newV[2+i*9]}
 		vecW := mgl32.Vec3{newV[6+i*9] - newV[0+i*9], newV[7+i*9] - newV[1+i*9], newV[8+i*9] - newV[2+i*9]}
 		n := [3]float32(vecV.Cross(vecW))

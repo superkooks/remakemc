@@ -59,7 +59,7 @@ func (e *Entity) DoUpdate(deltaT float64, dim *Dimension) {
 		scalar := time.Since(e.lerpEndTime) / lerpDelta
 
 		dir := e.lerpEndPos.Sub(e.lerpStartPos)
-		e.Position = dir.Mul(float32(scalar))
+		e.Position = dir.Mul(float32(scalar)).Add(e.lerpStartPos)
 
 		return
 	}

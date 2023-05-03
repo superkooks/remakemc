@@ -333,17 +333,20 @@ func Start() {
 					renderers.MakeChunkVAO(c, msg.mesh, msg.normals, msg.uvs, msg.lightLevels)
 
 				case proto.EntityCreate:
-					dim.Entities = append(dim.Entities, &core.Entity{
-						ID:         msg.EntityID,
-						Position:   msg.Position,
-						AABB:       msg.AABB,
-						EntityType: msg.EntityType,
-						// Lerp: true,
+					e := &core.Entity{
+						ID:            msg.EntityID,
+						Position:      msg.Position,
+						AABB:          msg.AABB,
+						EntityType:    msg.EntityType,
+						Lerp:          true,
 						Yaw:           msg.Yaw,
 						Pitch:         msg.Pitch,
 						LookAzimuth:   msg.LookAzimuth,
 						LookElevation: msg.LookElevation,
-					})
+					}
+					e.NewLerp(msg.Position)
+					e.NewLerp(msg.Position)
+					dim.Entities = append(dim.Entities, e)
 
 				case proto.EntityPosition:
 					if msg.EntityID == player.ID {
@@ -361,8 +364,7 @@ func Start() {
 								v.Position = msg.Position
 								v.Yaw = msg.Yaw
 
-								// TODO Add lerp
-								// v.NewLerp(msg.Position)
+								v.NewLerp(msg.Position)
 							}
 						}
 					}

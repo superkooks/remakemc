@@ -11,6 +11,7 @@ var Win *glfw.Window
 var FOVDegrees float32 = 70
 
 var cachedAspectRatio float32
+var isFocused bool
 
 func InitAll(width, height int) {
 	// Init GLFW window
@@ -55,6 +56,15 @@ func initGlfw(width, height int) *glfw.Window {
 	}
 	window.MakeContextCurrent()
 	window.SetInputMode(glfw.CursorMode, glfw.CursorDisabled)
+	window.SetFocusCallback(windowFocusCallback)
 
 	return window
+}
+
+func IsWindowFocused() bool {
+	return isFocused
+}
+
+func windowFocusCallback(w *glfw.Window, focused bool) {
+	isFocused = focused
 }

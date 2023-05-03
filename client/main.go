@@ -56,7 +56,7 @@ func Start() {
 	// Join server
 	var err error
 	conn, err = net.DialTCP("tcp4", nil, &net.TCPAddr{
-		IP:   net.IPv4(192, 168, 73, 215),
+		IP:   net.IPv4(127, 0, 0, 1),
 		Port: 53785,
 	})
 	if err != nil {
@@ -195,7 +195,9 @@ func Start() {
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 		// Process user input and recalculate view matrix
-		player.ProcessMousePosition(deltaTime)
+		if renderers.IsWindowFocused() {
+			player.ProcessMousePosition(deltaTime)
+		}
 		player.DoUpdate(deltaTime, dim)
 		view := mgl32.LookAtV(
 			player.CameraPos(),                       // Camera is at ... in World Space

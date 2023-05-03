@@ -201,6 +201,12 @@ func (p *Player) DoTick() {
 func (p *Player) ProcessMousePosition(deltaT float64) {
 	// Get and reset cursor position
 	xpos, ypos := renderers.Win.GetCursorPos()
+
+	if ypos < 0 {
+		// User is grabbing title bar, ignore it
+		return
+	}
+
 	width, height := renderers.Win.GetSize()
 	renderers.Win.SetCursorPos(float64(width)/2, float64(height)/2)
 

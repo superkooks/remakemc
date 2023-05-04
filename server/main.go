@@ -11,8 +11,9 @@ import (
 )
 
 type Client struct {
-	Conn    *net.TCPConn
-	encoder *msgpack.Encoder
+	Conn      *net.TCPConn
+	SendQueue chan interface{}
+	encoder   *msgpack.Encoder
 
 	Username    string
 	Position    proto.PlayerPosition
@@ -26,6 +27,7 @@ var clients []*Client
 func (c *Client) Listen() {
 	d := msgpack.NewDecoder(c.Conn)
 	c.encoder = msgpack.NewEncoder(c.Conn)
+	c.SendQueue = make(chan interface{}, 32)
 	for {
 		var msgType int
 		err := d.Decode(&msgType)

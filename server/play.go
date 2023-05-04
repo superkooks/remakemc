@@ -45,19 +45,19 @@ func (c *Client) HandleJoin(j proto.Join) {
 	msg.InitialChunks = proto.NewLoadChunks(chunks)
 	Dim.Lock.Unlock()
 
-	c.encoder.Encode(proto.PLAY)
-	c.encoder.Encode(msg)
+	c.SendQueue <- proto.PLAY
+	c.SendQueue <- msg
 
 	// Update all clients
 	fmt.Println("no. of clients", len(clients))
 	for _, v := range clients {
 		if v != c {
 			fmt.Println("updating old client", c.Position.EntityID, "of new player", v.Position.EntityID)
-			v.encoder.Encode(proto.ENTITY_CREATE)
-			v.encoder.Encode(proto.EntityCreate{
+			v.SendQueue <- proto.ENTITY_CREATE
+			v.SendQueue <- proto.EntityCreate{
 				EntityPosition: msg.Player,
 				EntityType:     "mc:remoteplayer",
-			})
+			}
 		}
 	}
 
@@ -65,11 +65,11 @@ func (c *Client) HandleJoin(j proto.Join) {
 	for _, v := range clients {
 		if v != c {
 			fmt.Println("updating new client of player", v.Position.EntityID)
-			c.encoder.Encode(proto.ENTITY_CREATE)
-			c.encoder.Encode(proto.EntityCreate{
+			c.SendQueue <- proto.ENTITY_CREATE
+			c.SendQueue <- proto.EntityCreate{
 				EntityPosition: proto.EntityPosition(v.Position),
 				EntityType:     "mc:remoteplayer",
-			})
+			}
 		}
 	}
 }
@@ -134,13 +134,13 @@ func (c *Client) HandlePlayerPosition(p proto.PlayerPosition) {
 				chunks = append(chunks, GetChunkOrGen(v))
 			}
 
-			c.encoder.Encode(proto.LOAD_CHUNKS)
-			c.encoder.Encode(proto.NewLoadChunks(chunks))
+			c.SendQueue <- proto.LOAD_CHUNKS
+			c.SendQueue <- proto.NewLoadChunks(chunks)
 		}
 		if len(unloadChunks) != 0 {
 			fmt.Println("writing unload chunks")
-			c.encoder.Encode(proto.UNLOAD_CHUNKS)
-			c.encoder.Encode(unloadChunks)
+			c.SendQueue <- proto.UNLOAD_CHUNKS
+			c.SendQueue <- unloadChunks
 		}
 
 		c.loadedChunks = allChunks
@@ -150,8 +150,8 @@ func (c *Client) HandlePlayerPosition(p proto.PlayerPosition) {
 	// Update all clients
 	for _, v := range clients {
 		if v != c {
-			v.encoder.Encode(proto.ENTITY_POSITION)
-			v.encoder.Encode(p)
+			v.SendQueue <- proto.ENTITY_POSITION
+			v.SendQueue <- p
 		}
 	}
 
@@ -180,11 +180,11 @@ func (c *Client) HandleBlockInteraction(b proto.BlockInteraction) {
 		for _, u := range v.loadedChunks {
 			if u == chunkPos {
 				// Update the client
-				v.encoder.Encode(proto.BLOCK_UPDATE)
-				v.encoder.Encode(proto.BlockUpdate{
+				v.SendQueue <- proto.BLOCK_UPDATE
+				v.SendQueue <- proto.BlockUpdate{
 					Position:  newBlock.Position,
 					BlockType: newBlock.Type.Name,
-				})
+				}
 				break
 			}
 		}
@@ -209,11 +209,11 @@ func (c *Client) HandleBlockDig(b proto.BlockDig) {
 		for _, u := range v.loadedChunks {
 			if u == chunkPos {
 				// Update the client
-				v.encoder.Encode(proto.BLOCK_UPDATE)
-				v.encoder.Encode(proto.BlockUpdate{
+				v.SendQueue <- proto.BLOCK_UPDATE
+				v.SendQueue <- proto.BlockUpdate{
 					Position:  newBlock.Position,
 					BlockType: "",
-				})
+				}
 				break
 			}
 		}

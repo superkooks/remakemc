@@ -6,7 +6,7 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 )
 
-type BlockFace int
+type BlockFace uint8
 
 const (
 	FaceTop BlockFace = iota
@@ -17,8 +17,18 @@ const (
 	FaceBack
 )
 
+var FaceDirection = map[BlockFace]Vec3{
+	FaceTop:    NewVec3(0, 1, 0),
+	FaceBottom: NewVec3(0, -1, 0),
+	FaceLeft:   NewVec3(-1, 0, 0),
+	FaceRight:  NewVec3(1, 0, 0),
+	FaceFront:  NewVec3(0, 0, 1),
+	FaceBack:   NewVec3(0, 0, -1),
+}
+
 type Block struct {
-	Type *BlockType
+	Position Vec3
+	Type     *BlockType
 }
 
 type BlockType struct {
@@ -104,20 +114,20 @@ func (d *Dimension) GetBlockAtOptimised(pos Vec3, chunkGuess *Chunk) Block {
 	return chk.GetBlockAt(NewVec3(x, y, z))
 }
 
-func (d *Dimension) SetBlockAt(b Block, pos Vec3) {
+func (d *Dimension) SetBlockAt(b Block) {
 	chk := d.Chunks[NewVec3(
-		FlooredDivision(pos.X, 16)*16,
-		FlooredDivision(pos.Y, 16)*16,
-		FlooredDivision(pos.Z, 16)*16,
+		FlooredDivision(b.Position.X, 16)*16,
+		FlooredDivision(b.Position.Y, 16)*16,
+		FlooredDivision(b.Position.Z, 16)*16,
 	)]
 
 	if chk == nil {
 		return
 	}
 
-	x := FlooredRemainder(pos.X, 16)
-	y := FlooredRemainder(pos.Y, 16)
-	z := FlooredRemainder(pos.Z, 16)
+	x := FlooredRemainder(b.Position.X, 16)
+	y := FlooredRemainder(b.Position.Y, 16)
+	z := FlooredRemainder(b.Position.Z, 16)
 	chk.SetBlockAt(NewVec3(x, y, z), b)
 }
 

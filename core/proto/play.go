@@ -10,6 +10,30 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
+// Start or finish digging a block.
+// Digging must be started, then ended within the appropriate time for mining that block.
+// Sent by clients
+type BlockDig struct {
+	Position      core.Vec3
+	SubvoxelHit   mgl32.Vec3
+	FinishDigging bool // start digging = false
+}
+
+// Message sent when a player right clicks on a block for any action.
+// i.e. sent both when placing and interacting
+// Sent by clients
+type BlockInteraction struct {
+	Position    core.Vec3 // the existing block that was interacted with
+	SubvoxelHit mgl32.Vec3
+}
+
+// Updates a block within the render range of a client to a block type
+// Sent by the server
+type BlockUpdate struct {
+	Position  core.Vec3
+	BlockType string
+}
+
 // Indicates the desired state.
 // Sent by clients
 type PlayerSneaking bool

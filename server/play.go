@@ -156,3 +156,68 @@ func (c *Client) HandlePlayerPosition(p proto.PlayerPosition) {
 	}
 
 }
+
+func (c *Client) HandleBlockInteraction(b proto.BlockInteraction) {
+	// TODO Check for reach
+
+	Dim.Lock.Lock()
+
+	// TODO Support interactions
+
+	// Place the block
+	face := core.FaceFromSubvoxel(b.SubvoxelHit)
+	newBlock := core.Block{
+		Position: b.Position.Add(core.FaceDirection[face]),
+		Type:     core.BlockRegistry["mc:cobblestone"],
+		// TODO INVENTORY Type: core.BlockRegistry[b.BlockType],
+	}
+	Dim.SetBlockAt(newBlock)
+
+	// Update clients if the chunk is loaded for them
+	chunkPos := Dim.GetChunkContaining(newBlock.Position).Position
+
+	for _, v := range clients {
+		for _, u := range v.loadedChunks {
+			if u == chunkPos {
+				// Update the client
+				v.encoder.Encode(proto.BLOCK_UPDATE)
+				v.encoder.Encode(proto.BlockUpdate{
+					Position:  newBlock.Position,
+					BlockType: newBlock.Type.Name,
+				})
+				break
+			}
+		}
+	}
+
+	Dim.Lock.Unlock()
+}
+
+func (c *Client) HandleBlockDig(b proto.BlockDig) {
+	// TODO Check for reach
+	// TODO survival mining
+
+	Dim.Lock.Lock()
+
+	newBlock := core.Block{Position: b.Position, Type: nil}
+	Dim.SetBlockAt(newBlock)
+
+	// Update clients if the chunk is loaded for them
+	chunkPos := Dim.GetChunkContaining(b.Position).Position
+
+	for _, v := range clients {
+		for _, u := range v.loadedChunks {
+			if u == chunkPos {
+				// Update the client
+				v.encoder.Encode(proto.BLOCK_UPDATE)
+				v.encoder.Encode(proto.BlockUpdate{
+					Position:  newBlock.Position,
+					BlockType: "",
+				})
+				break
+			}
+		}
+	}
+
+	Dim.Lock.Unlock()
+}

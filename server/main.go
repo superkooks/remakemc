@@ -80,6 +80,24 @@ func (c *Client) Listen() {
 			}
 
 			c.HandlePlayerPosition(p)
+
+		case proto.BLOCK_DIG:
+			var b proto.BlockDig
+			err := d.Decode(&b)
+			if err != nil {
+				panic(err)
+			}
+
+			c.HandleBlockDig(b)
+
+		case proto.BLOCK_INTERACTION:
+			var b proto.BlockInteraction
+			err := d.Decode(&b)
+			if err != nil {
+				panic(err)
+			}
+
+			c.HandleBlockInteraction(b)
 		}
 	}
 }

@@ -130,6 +130,14 @@ func Start() {
 				}
 				serverRead <- data
 
+			case proto.BLOCK_UPDATE:
+				var data proto.BlockUpdate
+				err = d.Decode(&data)
+				if err != nil {
+					panic(err)
+				}
+				serverRead <- data
+
 			default:
 				panic("unknown packet type")
 			}
@@ -220,12 +228,16 @@ func Start() {
 
 		// Mining
 		if renderers.Win.GetMouseButton(glfw.MouseButton1) == glfw.Press && mouseOne.Invoke() {
-			core.TraceRay(player.LookDir(), player.CameraPos(), 16, func(v, _ mgl32.Vec3) (stop bool) {
+			core.TraceRay(player.LookDir(), player.CameraPos(), 16, func(v, h mgl32.Vec3) (stop bool) {
 				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 				if block.Type != nil {
-					block.Type = nil
-					dim.SetBlockAt(block, core.NewVec3FromFloat(v))
-					renderers.UpdateRequiredMeshes(dim, core.NewVec3FromFloat(v))
+					serverWrite.Encode(proto.BLOCK_DIG)
+					serverWrite.Encode(proto.BlockDig{
+						Position:      block.Position,
+						SubvoxelHit:   h,
+						FinishDigging: true, // TODO implement survival digging
+					})
+
 					return true
 				} else {
 					return false
@@ -240,27 +252,12 @@ func Start() {
 			core.TraceRay(player.LookDir(), player.CameraPos(), 16, func(v, h mgl32.Vec3) (stop bool) {
 				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 				if block.Type != nil {
-					placePos := core.NewVec3FromFloat(v)
+					serverWrite.Encode(proto.BLOCK_INTERACTION)
+					serverWrite.Encode(proto.BlockInteraction{
+						Position:    block.Position,
+						SubvoxelHit: h,
+					})
 
-					switch core.FaceFromSubvoxel(h) {
-					case core.FaceTop:
-						placePos = placePos.Add(core.Vec3{Y: 1})
-					case core.FaceBottom:
-						placePos = placePos.Add(core.Vec3{Y: -1})
-					case core.FaceLeft:
-						placePos = placePos.Add(core.Vec3{X: -1})
-					case core.FaceRight:
-						placePos = placePos.Add(core.Vec3{X: 1})
-					case core.FaceFront:
-						placePos = placePos.Add(core.Vec3{Z: 1})
-					case core.FaceBack:
-						placePos = placePos.Add(core.Vec3{Z: -1})
-					}
-
-					dim.SetBlockAt(core.Block{
-						Type: blocks.Cobblestone,
-					}, placePos)
-					renderers.UpdateRequiredMeshes(dim, placePos)
 					return true
 				} else {
 					return false
@@ -368,6 +365,17 @@ func Start() {
 							}
 						}
 					}
+
+				case proto.BlockUpdate:
+					dim.Lock.Lock()
+
+					dim.SetBlockAt(core.Block{
+						Position: msg.Position,
+						Type:     core.BlockRegistry[msg.BlockType],
+					})
+					renderers.UpdateRequiredMeshes(dim, msg.Position)
+
+					dim.Lock.Unlock()
 
 				}
 			default:

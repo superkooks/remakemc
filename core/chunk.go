@@ -56,7 +56,7 @@ func (c *Chunk) GetBlockAt(pos Vec3) Block {
 		panic("invalid number of palette bits")
 	}
 
-	return Block{Type: BlockRegistry[c.BlockPalette[ind]]}
+	return Block{Type: BlockRegistry[c.BlockPalette[ind]], Position: pos.Add(c.Position)}
 }
 
 func (c *Chunk) SetBlockAt(pos Vec3, bl Block) {

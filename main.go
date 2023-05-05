@@ -22,7 +22,7 @@ func main() {
 		server.Start(fmt.Sprint(config.App.Server.Address, ":", config.App.Server.Port))
 		select {}
 	} else {
-		// server.Start("localhost:53785")
+		server.Start("localhost:53785")
 		client.Start()
 	}
 }

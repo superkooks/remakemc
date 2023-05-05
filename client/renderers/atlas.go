@@ -31,22 +31,20 @@ func NewAtlas() *Atlas {
 	}
 }
 
-// All textures MUST have an aspect ratio of 1
 func (a *Atlas) AddTex(i *image.RGBA, name string) {
-	if i.Rect.Dx() != i.Rect.Dy() {
-		panic("textures in atlas must have an aspect ratio of 1")
-	}
-
 	if a.largestTexSide < i.Rect.Dx() {
 		a.largestTexSide = i.Rect.Dx()
+	} else if a.largestTexSide < i.Rect.Dy() {
+		a.largestTexSide = i.Rect.Dy()
 	}
 
 	a.textures[name] = i
 }
 
-// All textures MUST have an aspect ratio of 1 and be in PNG format
-// All textures widths SHOULD be a power of 2
+// All textures MUST be in PNG format
 // Filenames MUST be texname+".png"
+// To maximize packing efficiency, ensure all textures are square and
+// have the size side length
 func (a *Atlas) AddTexFromAssets(texname string) {
 	f, err := assets.Files.Open(texname + ".png")
 	if err != nil {
@@ -82,8 +80,8 @@ func (a *Atlas) Finalize() *image.RGBA {
 		a.uvs[k] = mgl32.Vec4{
 			float32(x) / float32(i.Rect.Dx()),
 			float32(y) / float32(i.Rect.Dy()),
-			float32(x+a.largestTexSide) / float32(i.Rect.Dx()),
-			float32(y+a.largestTexSide) / float32(i.Rect.Dy()),
+			float32(x+v.Rect.Dx()) / float32(i.Rect.Dx()),
+			float32(y+v.Rect.Dy()) / float32(i.Rect.Dy()),
 		}
 
 		j++

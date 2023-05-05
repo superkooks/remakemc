@@ -10,11 +10,12 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/pierrec/lz4 v2.6.1+incompatible
 	github.com/vmihailenco/msgpack/v5 v5.3.5
+	golang.org/x/image v0.7.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/frankban/quicktest v1.14.4 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/image v0.0.0-20190321063152-3fc05d484e9f // indirect
+	golang.org/x/text v0.9.0 // indirect
 )

@@ -26,8 +26,6 @@ var clients []*Client
 
 func (c *Client) Listen() {
 	d := msgpack.NewDecoder(c.Conn)
-	c.encoder = msgpack.NewEncoder(c.Conn)
-	c.SendQueue = make(chan interface{}, 32)
 	for {
 		var msgType int
 		err := d.Decode(&msgType)
@@ -104,6 +102,19 @@ func (c *Client) Listen() {
 	}
 }
 
+func (c *Client) Send() {
+	c.SendQueue = make(chan interface{}, 32)
+	c.encoder = msgpack.NewEncoder(c.Conn)
+
+	for {
+		msg := <-c.SendQueue
+		err := c.encoder.Encode(msg)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
 func Start(addr string) {
 	// Generate terrain
 	Dim.Lock.Lock()
@@ -137,6 +148,7 @@ func Start(addr string) {
 			c := &Client{Conn: conn}
 			clients = append(clients, c)
 			go c.Listen()
+			go c.Send()
 		}
 	}()
 }

@@ -52,6 +52,7 @@ func Start() {
 
 	// Initialize gui elements
 	gui.Init()
+	gui.ReadOTF()
 
 	// Join server
 	var err error
@@ -281,13 +282,15 @@ func Start() {
 			}
 		})
 
-		// Render gui
-		gui.RenderGame()
-
 		// Render all entities
 		for _, v := range dim.Entities {
 			core.EntityRegistry[v.EntityType].RenderType.RenderEntity(v, view)
 		}
+
+		// Render gui
+		gui.RenderGame()
+
+		gui.RenderText(mgl32.Vec2{0, 0}, "4")
 
 		// Update window
 		glfw.PollEvents()

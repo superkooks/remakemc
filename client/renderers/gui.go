@@ -2,6 +2,7 @@ package renderers
 
 import (
 	"github.com/go-gl/gl/v4.1-core/gl"
+	"github.com/go-gl/mathgl/mgl32"
 )
 
 var guiProg uint32
@@ -19,11 +20,16 @@ func initGUI() {
 
 layout (location = 0) in vec3 vp;
 layout (location = 1) in vec2 uv;
-uniform float aspectRatio;
+uniform vec2 modelStart;
+uniform vec2 modelEnd;
 out vec2 fragUV;
 
 void main() {
-	gl_Position = vec4(vp.x, vp.y*aspectRatio, vp.z, 1.0);
+	vec2 box = modelEnd - modelStart;
+	gl_Position.x = modelStart.x + vp.x*box.x;
+	gl_Position.y = modelStart.y + vp.y*box.y;
+	gl_Position.z = vp.z;
+	gl_Position.w = 1.0;
 	fragUV = uv;
 }`+"\x00", gl.VERTEX_SHADER)
 	if err != nil {
@@ -50,20 +56,21 @@ void main() {
 	gl.LinkProgram(guiProg)
 }
 
-func RenderGUIElement(e GUIElem) {
+func RenderGUIElement(e GUIElem, start, end mgl32.Vec2) {
 	gl.UseProgram(guiProg)
 
-	// Blend transparency
+	// Blend transparency and disable depth test
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+	gl.Disable(gl.DEPTH_TEST)
 
 	// Enable texture
 	gl.ActiveTexture(gl.TEXTURE0)
 	gl.BindTexture(gl.TEXTURE_2D, e.Tex)
 
 	// Set aspect ratio uniform
-	w, h := Win.GetSize()
-	gl.Uniform1f(gl.GetUniformLocation(guiProg, gl.Str("aspectRatio\x00")), float32(w)/float32(h))
+	gl.Uniform2fv(gl.GetUniformLocation(guiProg, gl.Str("modelStart\x00")), 1, &start[0])
+	gl.Uniform2fv(gl.GetUniformLocation(guiProg, gl.Str("modelEnd\x00")), 1, &end[0])
 
 	// Draw
 	gl.BindVertexArray(e.VAO)

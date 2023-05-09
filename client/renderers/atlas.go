@@ -1,7 +1,6 @@
 package renderers
 
 import (
-	"fmt"
 	"image"
 	"image/draw"
 	"image/png"
@@ -72,8 +71,6 @@ func (a *Atlas) Finalize() *image.RGBA {
 	for k, v := range a.textures {
 		x := (j * a.largestTexSide) % atlasWidth
 		y := (j * a.largestTexSide) / atlasWidth * a.largestTexSide
-
-		fmt.Println(k, x, y)
 
 		draw.Draw(i, image.Rect(x, y, x+a.largestTexSide, y+a.largestTexSide), v, image.Pt(0, 0), draw.Over)
 

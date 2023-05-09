@@ -1,7 +1,9 @@
 package gui
 
-import "remakemc/client/renderers"
+import (
+	"github.com/go-gl/mathgl/mgl32"
+)
 
 func RenderGame() {
-	renderers.RenderGUIElement(crosshair)
+	RenderWithAnchor(crosshair, mgl32.Vec2{0, 0}, mgl32.Vec2{0.03, 0.03}, Anchor{0, 0})
 }

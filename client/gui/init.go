@@ -42,18 +42,12 @@ func initFromAssets(fileName string, target *renderers.GUIElem) {
 
 	// Create buffer for vertices
 	verts := renderers.GlBufferFrom([]float32{
-		// -1, -1, -1,
-		// 1, -1, -1,
-		// 1, 1, -1,
-		// 1, 1, -1,
-		// -1, 1, -1,
-		// -1, -1, -1,
-		-0.01, -0.01, 0.01,
-		0.01, -0.01, 0.01,
-		0.01, 0.01, 0.01,
-		0.01, 0.01, 0.01,
-		-0.01, 0.01, 0.01,
-		-0.01, -0.01, 0.01,
+		0, 0, 1,
+		1, 0, 1,
+		1, 1, 1,
+		1, 1, 1,
+		0, 1, 1,
+		0, 0, 1,
 	})
 
 	// Create buffer for uvs

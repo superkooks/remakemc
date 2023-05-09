@@ -290,7 +290,11 @@ func Start() {
 		// Render gui
 		gui.RenderGame()
 
-		gui.RenderText(mgl32.Vec2{0, 0}, "4")
+		gui.RenderText(
+			mgl32.Vec2{1, 1},
+			fmt.Sprintf("%0.1f fps", 1/(cumulativeTime/float64(frames))),
+			gui.Anchor{Vertical: 1, Horizontal: 1},
+		)
 
 		// Update window
 		glfw.PollEvents()

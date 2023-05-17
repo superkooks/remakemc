@@ -7,17 +7,15 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 )
 
-var ReusableShaders = make(map[string](func() *EntityShader))
-var compiledShaders = make(map[string]*EntityShader)
+var ReusableShaders = make(map[string](func() *Shader))
+var compiledShaders = make(map[string]*Shader)
 
-type EntityShader struct {
+type Shader struct {
 	Program  uint32
 	Uniforms map[string]int32
 }
 
 func initEntity() {
-	initEntityShaders()
-
 	for k, v := range ReusableShaders {
 		compiledShaders[k] = v()
 	}
@@ -31,12 +29,12 @@ type TestEntityRenderer struct {
 	Vertices []float32
 	Shader   string // index into ReusableShaders
 
-	eshader *EntityShader
-	vao     uint32
+	shader *Shader
+	vao    uint32
 }
 
 func (d *TestEntityRenderer) Init() {
-	d.eshader = compiledShaders[d.Shader]
+	d.shader = compiledShaders[d.Shader]
 
 	// Make entity VAO
 	verts := GlBufferFrom(d.Vertices)
@@ -55,18 +53,18 @@ func (d *TestEntityRenderer) Init() {
 }
 
 func (d *TestEntityRenderer) RenderEntity(e *core.Entity, view mgl32.Mat4) {
-	gl.UseProgram(d.eshader.Program)
+	gl.UseProgram(d.shader.Program)
 	gl.Enable(gl.DEPTH_TEST)
 	gl.DepthFunc(gl.LEQUAL)
 
 	// Assign view & projection mats
 	projection := mgl32.Perspective(mgl32.DegToRad(FOVDegrees), GetAspectRatio(), 0.05, 1024.0)
-	gl.UniformMatrix4fv(d.eshader.Uniforms["projection"], 1, false, &projection[0])
-	gl.UniformMatrix4fv(d.eshader.Uniforms["view"], 1, false, &view[0])
+	gl.UniformMatrix4fv(d.shader.Uniforms["projection"], 1, false, &projection[0])
+	gl.UniformMatrix4fv(d.shader.Uniforms["view"], 1, false, &view[0])
 
 	// Translate entity into position
 	model := mgl32.Translate3D(e.Position[0], e.Position[1], e.Position[2])
-	gl.UniformMatrix4fv(d.eshader.Uniforms["model"], 1, false, &model[0])
+	gl.UniformMatrix4fv(d.shader.Uniforms["model"], 1, false, &model[0])
 
 	// Draw
 	gl.BindVertexArray(d.vao)

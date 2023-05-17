@@ -50,7 +50,7 @@ type RenderBlockType interface {
 	Init()
 
 	// RenderFace should returns the data used for rendering, with the vertices
-	// returned in block space. i.e. from (0,0,0) to (1,1,1)
+	// returned in chunck space. i.e. from (0,0,0) to (16,16,16), depending on the position
 	RenderFace(face BlockFace, pos mgl32.Vec3) (verts, normals, uvs []float32)
 }
 

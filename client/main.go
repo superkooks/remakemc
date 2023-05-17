@@ -10,11 +10,13 @@ import (
 	"remakemc/core"
 	"remakemc/core/blocks"
 	_ "remakemc/core/entities"
+	"remakemc/core/items"
 	"remakemc/core/proto"
 	"runtime"
 	"runtime/debug"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
@@ -179,6 +181,17 @@ func Start() {
 	var allTickers []core.Tickable
 	allTickers = append(allTickers, player)
 
+	gl.DebugMessageCallback(func(
+		source uint32,
+		gltype uint32,
+		id uint32,
+		severity uint32,
+		length int32,
+		message string,
+		userParam unsafe.Pointer) {
+		fmt.Println(message)
+	}, nil)
+
 	// Game loop
 	previousTime := glfw.GetTime()
 	var frames int
@@ -202,6 +215,7 @@ func Start() {
 		// Clear window
 		gl.ClearColor(79.0/255, 167.0/255, 234.0/255, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+		gl.Enable(gl.DEBUG_OUTPUT)
 
 		// Process user input and recalculate view matrix
 		if renderers.IsWindowFocused() {
@@ -295,6 +309,13 @@ func Start() {
 			fmt.Sprintf("%0.1f fps", 1/(cumulativeTime/float64(frames))),
 			gui.Anchor{Vertical: 1, Horizontal: 1},
 		)
+
+		start, end := gui.AnchorAt(
+			mgl32.Vec2{1, -1},
+			mgl32.Vec2{0.2, 0.2},
+			gui.Anchor{Horizontal: 1, Vertical: -1},
+		)
+		items.Cobblestone.RenderType.RenderItem(items.Cobblestone, start, end)
 
 		// Update window
 		glfw.PollEvents()

@@ -25,10 +25,12 @@ func InitAll(width, height int) {
 	log.Println("OpenGL version", version)
 
 	// Init renderers
+	initReusableShaders()
 	initGUI()
 	initChunk()
 	initSelector()
 	initEntity()
+	initItems()
 }
 
 func GetAspectRatio() float32 {

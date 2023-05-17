@@ -18,6 +18,6 @@ var RemotePlayer = core.AddEntityToRegistry(&core.EntityType{
 			0, 0, 0,
 		},
 
-		Shader: "mc:test",
+		Shader: "mc:test_entity",
 	},
 })

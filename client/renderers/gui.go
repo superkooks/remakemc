@@ -68,7 +68,7 @@ func RenderGUIElement(e GUIElem, start, end mgl32.Vec2) {
 	gl.ActiveTexture(gl.TEXTURE0)
 	gl.BindTexture(gl.TEXTURE_2D, e.Tex)
 
-	// Set aspect ratio uniform
+	// Set model uniforms
 	gl.Uniform2fv(gl.GetUniformLocation(guiProg, gl.Str("modelStart\x00")), 1, &start[0])
 	gl.Uniform2fv(gl.GetUniformLocation(guiProg, gl.Str("modelEnd\x00")), 1, &end[0])
 

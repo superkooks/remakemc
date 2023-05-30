@@ -12,3 +12,27 @@ var Cobblestone = core.AddItemToRegistry(&core.ItemType{
 		Block: "mc:cobblestone",
 	},
 })
+
+var Grass = core.AddItemToRegistry(&core.ItemType{
+	Name:         "mc:grass",
+	MaxStackSize: 64,
+	RenderType: &renderers.ItemFromBlock{
+		Block: "mc:grass",
+	},
+})
+
+var Dirt = core.AddItemToRegistry(&core.ItemType{
+	Name:         "mc:dirt",
+	MaxStackSize: 64,
+	RenderType: &renderers.ItemFromBlock{
+		Block: "mc:dirt",
+	},
+})
+
+var Stone = core.AddItemToRegistry(&core.ItemType{
+	Name:         "mc:stone",
+	MaxStackSize: 64,
+	RenderType: &renderers.ItemFromBlock{
+		Block: "mc:stone",
+	},
+})

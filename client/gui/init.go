@@ -13,6 +13,8 @@ import (
 func Init() {
 	// Load all GUI assets
 	initFromAssets("crosshair.png", &crosshair)
+	initFromAssets("hotbar.png", &hotbar)
+	initFromAssets("hotbar_selected.png", &hotbarSelected)
 }
 
 func initFromAssets(fileName string, target *renderers.GUIElem) {
@@ -52,12 +54,12 @@ func initFromAssets(fileName string, target *renderers.GUIElem) {
 
 	// Create buffer for uvs
 	uvs := renderers.GlBufferFrom([]float32{
-		0, 0,
-		1, 0,
-		1, 1,
-		1, 1,
 		0, 1,
+		1, 1,
+		1, 0,
+		1, 0,
 		0, 0,
+		0, 1,
 	})
 
 	// Assign buffers to vertex array
@@ -79,3 +81,5 @@ func initFromAssets(fileName string, target *renderers.GUIElem) {
 }
 
 var crosshair renderers.GUIElem
+var hotbar renderers.GUIElem
+var hotbarSelected renderers.GUIElem

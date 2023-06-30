@@ -1,7 +1,6 @@
 package gui
 
 import (
-	_ "embed"
 	"image"
 	"image/png"
 	"remakemc/client/assets"

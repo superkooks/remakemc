@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
@@ -137,7 +138,7 @@ func ReadOTF() {
 		0, 0, 1,
 	})
 
-	for i := 0x21; i < 0x7f; i++ {
+	for i := 0x20; i < 0x7f; i++ {
 		// Create buffer for uvs
 		startUV, endUV := FontAtlas.GetUV(string(rune(i)))
 		uvs := renderers.GlBufferFrom([]float32{
@@ -187,6 +188,10 @@ func RenderText(pos mgl32.Vec2, text string, anchor Anchor) {
 	}
 
 	for k, v := range text {
+		if textElems[v].VAO == 0 {
+			panic(fmt.Sprintf("invalid text element: %v", v))
+		}
+
 		renderers.RenderGUIElement(
 			textElems[v],
 			start.Add(mgl32.Vec2{end.Sub(start)[0] / float32(len(text)) * float32(k), 0}),

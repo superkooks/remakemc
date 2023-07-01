@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"remakemc/config"
 	"remakemc/core"
+	"remakemc/core/items"
 	"remakemc/core/proto"
 
 	"github.com/go-gl/mathgl/mgl32"
@@ -44,6 +45,8 @@ func (c *Client) HandleJoin(j proto.Join) {
 	}
 	msg.InitialChunks = proto.NewLoadChunks(chunks)
 	Dim.Lock.Unlock()
+
+	msg.Inventory[6] = core.ItemStack{Item: items.Cobblestone.Name, Count: 64}
 
 	c.SendQueue <- proto.PLAY
 	c.SendQueue <- msg

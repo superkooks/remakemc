@@ -9,8 +9,12 @@ type ItemType struct {
 }
 
 type ItemStack struct {
-	Item  *ItemType
+	Item  string
 	Count int
+}
+
+func (i ItemStack) IsEmpty() bool {
+	return i.Item == "" || i.Count <= 0
 }
 
 type RenderItemType interface {

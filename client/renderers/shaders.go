@@ -108,7 +108,7 @@ out vec3 fragVertex;
 void main() {
 	vec2 box = modelEnd - modelStart;
 	vec4 inter = projection * view * model * vec4(vp, 1.0);
-	inter *= 0.4;
+	inter *= 0.39;
 	inter += vec4(0.5, 0.5, 0, 0);
 
 	

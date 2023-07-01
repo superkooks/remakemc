@@ -19,6 +19,10 @@ type Player struct {
 
 	Speed           float64
 	MouseSensitivty float64
+
+	// First 9 elements for the hotbar, the rest the inventory
+	// from top left in rows
+	Inventory [36]core.ItemStack
 }
 
 func NewPlayer(position mgl32.Vec3, entityID uuid.UUID) *Player {

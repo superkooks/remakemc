@@ -17,7 +17,7 @@ import (
 )
 
 // Font size during gui rendering
-const FONT_SIZE = 0.03
+const FONT_SIZE = 0.02
 
 var FontAtlas *renderers.Atlas
 var textElems = make(map[rune]renderers.GUIElem)

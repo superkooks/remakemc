@@ -1,5 +1,7 @@
 package proto
 
+import "remakemc/core"
+
 // The first message sent by the client to the server.
 // In response, a server will send the play event
 // Sent by clients
@@ -12,4 +14,5 @@ type Join struct {
 type Play struct {
 	Player        EntityPosition
 	InitialChunks LoadChunks
+	Inventory     [36]core.ItemStack
 }

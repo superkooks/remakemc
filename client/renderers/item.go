@@ -66,7 +66,7 @@ func (t *ItemFromBlock) RenderItem(i *core.ItemType, start mgl32.Vec2, end mgl32
 	gl.Disable(gl.DEPTH_TEST)
 
 	// Assign view & projection mats
-	projection := mgl32.Perspective(mgl32.DegToRad(FOVDegrees), 1, 0.05, 1024.0)
+	projection := mgl32.Perspective(mgl32.DegToRad(70), 1, 0.05, 1024.0)
 	gl.UniformMatrix4fv(shader.Uniforms["projection"], 1, false, &projection[0])
 
 	view := mgl32.LookAtV(mgl32.Vec3{-4, 2.5, 4}, mgl32.Vec3{0, 0, 0}, mgl32.Vec3{0, 1, 0})

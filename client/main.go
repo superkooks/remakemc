@@ -10,7 +10,7 @@ import (
 	"remakemc/core"
 	"remakemc/core/blocks"
 	_ "remakemc/core/entities"
-	"remakemc/core/items"
+	_ "remakemc/core/items"
 	"remakemc/core/proto"
 	"runtime"
 	"sync"
@@ -167,6 +167,7 @@ func Start() {
 	player.LookAzimuth = msg.Player.LookAzimuth
 	player.LookElevation = msg.Player.LookElevation
 	player.Yaw = msg.Player.Yaw
+	player.Inventory = msg.Inventory
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
 
 	// Initialize inputs
@@ -303,20 +304,13 @@ func Start() {
 		}
 
 		// Render gui
-		gui.RenderGame()
+		gui.RenderGame(1, player.Inventory[:9])
 
 		gui.RenderText(
 			mgl32.Vec2{1, 1},
 			fmt.Sprintf("%0.1f fps", 1/(cumulativeTime/float64(frames))),
 			gui.Anchor{Vertical: 1, Horizontal: 1},
 		)
-
-		start, end := gui.AnchorAt(
-			mgl32.Vec2{1, -1},
-			mgl32.Vec2{0.2, 0.2},
-			gui.Anchor{Horizontal: 1, Vertical: -1},
-		)
-		items.Cobblestone.RenderType.RenderItem(items.Cobblestone, start, end)
 
 		// Update window
 		glfw.PollEvents()

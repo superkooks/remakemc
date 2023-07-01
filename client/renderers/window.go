@@ -60,6 +60,7 @@ func initGlfw(width, height int) *glfw.Window {
 	window.MakeContextCurrent()
 	window.SetInputMode(glfw.CursorMode, glfw.CursorDisabled)
 	window.SetFocusCallback(windowFocusCallback)
+	glfw.SwapInterval(0)
 
 	return window
 }

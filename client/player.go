@@ -211,8 +211,8 @@ func (p *Player) ProcessMousePosition(deltaT float64) {
 	renderers.Win.SetCursorPos(float64(width)/2, float64(height)/2)
 
 	// Calculate new orientation
-	p.LookAzimuth += 0.05 * deltaT * (float64(width)/2 - float64(xpos))
-	p.LookElevation += 0.05 * deltaT * (float64(height)/2 - float64(ypos))
+	p.LookAzimuth += 0.001 * (float64(width)/2 - float64(xpos))
+	p.LookElevation += 0.001 * (float64(height)/2 - float64(ypos))
 
 	// You can't look further than up or down
 	if p.LookElevation < -math.Pi/2 {

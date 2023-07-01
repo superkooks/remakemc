@@ -13,7 +13,6 @@ import (
 	"remakemc/core/items"
 	"remakemc/core/proto"
 	"runtime"
-	"runtime/debug"
 	"sync"
 	"time"
 	"unsafe"
@@ -38,9 +37,6 @@ type meshDone struct {
 
 func Start() {
 	runtime.LockOSThread()
-
-	// Don't let allocated memory exceed 125% of in-use memory
-	debug.SetGCPercent(25)
 
 	// Initialize texture atlas
 	blocks.Grass.RenderType.Init()
@@ -189,6 +185,11 @@ func Start() {
 		length int32,
 		message string,
 		userParam unsafe.Pointer) {
+
+		if severity == gl.DEBUG_SEVERITY_NOTIFICATION {
+			return
+		}
+
 		fmt.Println(message)
 	}, nil)
 
@@ -369,7 +370,6 @@ func Start() {
 						LookAzimuth:   msg.LookAzimuth,
 						LookElevation: msg.LookElevation,
 					}
-					e.NewLerp(msg.Position)
 					e.NewLerp(msg.Position)
 					dim.Entities = append(dim.Entities, e)
 

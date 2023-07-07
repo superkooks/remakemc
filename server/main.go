@@ -19,6 +19,10 @@ type Client struct {
 	Position    proto.PlayerPosition
 	OldPosition proto.PlayerPosition
 
+	HotbarSlotSelected int
+	Hotbar             [9]core.ItemStack
+	Inventory          [27]core.ItemStack
+
 	loadedChunks []core.Vec3
 }
 
@@ -98,6 +102,21 @@ func (c *Client) Listen() {
 			}
 
 			c.HandleBlockInteraction(b)
+
+		case proto.PLAYER_HELD_ITEM:
+			var h proto.PlayerHeldItem
+			err := d.Decode(&h)
+			if err != nil {
+				panic(err)
+			}
+
+			c.HandlePlayerHeldItem(h)
+
+		default:
+			fmt.Println("unrecognized message from client, disconnecting them")
+			// TODO Cleanup client data
+			c.Conn.Close()
+			return
 		}
 	}
 }

@@ -14,6 +14,8 @@ import (
 func (c *Client) HandleJoin(j proto.Join) {
 	fmt.Println("join event")
 	c.Username = j.Username
+	c.Hotbar[6] = core.ItemStack{Item: items.Cobblestone.Name, Count: 64}
+	c.Hotbar[5] = core.ItemStack{Item: items.Dirt.Name, Count: 64}
 
 	// Reply with a play event
 	var msg proto.Play
@@ -46,7 +48,8 @@ func (c *Client) HandleJoin(j proto.Join) {
 	msg.InitialChunks = proto.NewLoadChunks(chunks)
 	Dim.Lock.Unlock()
 
-	msg.Inventory[6] = core.ItemStack{Item: items.Cobblestone.Name, Count: 64}
+	msg.Hotbar = c.Hotbar
+	msg.Inventory = c.Inventory
 
 	c.SendQueue <- proto.PLAY
 	c.SendQueue <- msg
@@ -150,7 +153,7 @@ func (c *Client) HandlePlayerPosition(p proto.PlayerPosition) {
 	}
 	Dim.Lock.Unlock()
 
-	// Update all clients
+	// Update all other clients
 	for _, v := range clients {
 		if v != c {
 			v.SendQueue <- proto.ENTITY_POSITION
@@ -163,6 +166,11 @@ func (c *Client) HandlePlayerPosition(p proto.PlayerPosition) {
 func (c *Client) HandleBlockInteraction(b proto.BlockInteraction) {
 	// TODO Check for reach
 
+	if c.Hotbar[c.HotbarSlotSelected].IsEmpty() {
+		// TODO Error
+		return
+	}
+
 	Dim.Lock.Lock()
 
 	// TODO Support interactions
@@ -171,10 +179,37 @@ func (c *Client) HandleBlockInteraction(b proto.BlockInteraction) {
 	face := core.FaceFromSubvoxel(b.SubvoxelHit)
 	newBlock := core.Block{
 		Position: b.Position.Add(core.FaceDirection[face]),
-		Type:     core.BlockRegistry["mc:cobblestone"],
-		// TODO INVENTORY Type: core.BlockRegistry[b.BlockType],
+		// Type:     core.BlockRegistry["mc:cobblestone"],
+		Type: core.BlockRegistry[c.Hotbar[c.HotbarSlotSelected].Item], // TODO item interact
 	}
 	Dim.SetBlockAt(newBlock)
+
+	// Decrement itemstack and update clint
+	c.Hotbar[c.HotbarSlotSelected].Count--
+	if c.Hotbar[c.HotbarSlotSelected].Count == 0 {
+		c.Hotbar[c.HotbarSlotSelected].Item = ""
+	}
+
+	c.SendQueue <- proto.PLAYER_INVENTORY
+	c.SendQueue <- proto.PlayerInventory{
+		Hotbar:    c.Hotbar,
+		Inventory: c.Inventory,
+	}
+
+	// If needed update player's equipment
+	if c.Hotbar[c.HotbarSlotSelected].Item == "" {
+		for _, v := range clients {
+			if v != c {
+				v.SendQueue <- proto.ENTITY_EQUIPMENT
+				v.SendQueue <- proto.EntityEquipment{
+					EntityID: c.Position.EntityID,
+					EntityEquipment: core.EntityEquipment{
+						HeldItemType: c.Hotbar[c.HotbarSlotSelected].Item,
+					},
+				}
+			}
+		}
+	}
 
 	// Update clients if the chunk is loaded for them
 	chunkPos := Dim.GetChunkContaining(newBlock.Position).Position

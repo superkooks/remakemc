@@ -20,11 +20,10 @@ import (
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/go-gl/mathgl/mgl32"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 var serverRead chan interface{}
-var serverWrite *msgpack.Encoder
+var serverWrite chan interface{}
 var conn *net.TCPConn
 
 type meshDone struct {
@@ -62,86 +61,17 @@ func Start() {
 		panic(err)
 	}
 	serverRead = make(chan interface{}, 32)
-	serverWrite = msgpack.NewEncoder(conn)
+	serverWrite = make(chan interface{}, 32)
+
+	// Read and write from network in separate thread
+	go readFromNet(serverRead)
+	go writeFromQueue(serverWrite)
 
 	// Send join event
-	err = serverWrite.Encode(proto.JOIN)
-	if err != nil {
-		panic(err)
-	}
-	err = serverWrite.Encode(proto.Join{
+	serverWrite <- proto.JOIN
+	serverWrite <- proto.Join{
 		Username: fmt.Sprintf("test-%v", rand.Intn(100)),
-	})
-	if err != nil {
-		panic(err)
 	}
-
-	// Read from network in separate thread
-	go func() {
-		d := msgpack.NewDecoder(conn)
-		for {
-			var msgType int
-			err := d.Decode(&msgType)
-			if err != nil {
-				panic(err)
-			}
-
-			switch msgType {
-			case proto.PLAY:
-				var data proto.Play
-				err = d.Decode(&data)
-				if err != nil {
-					panic(err)
-				}
-				serverRead <- data
-
-			case proto.LOAD_CHUNKS:
-				var data proto.LoadChunks
-				err = d.Decode(&data)
-				if err != nil {
-					panic(err)
-				}
-				serverRead <- data
-
-			case proto.UNLOAD_CHUNKS:
-				var data proto.UnloadChunks
-				err = d.Decode(&data)
-				if err != nil {
-					panic(err)
-				}
-				serverRead <- data
-
-			case proto.ENTITY_CREATE:
-				fmt.Println("received entity create")
-
-				var data proto.EntityCreate
-				err = d.Decode(&data)
-				if err != nil {
-					panic(err)
-				}
-				serverRead <- data
-
-			case proto.ENTITY_POSITION:
-				var data proto.EntityPosition
-				err = d.Decode(&data)
-				if err != nil {
-					panic(err)
-				}
-				serverRead <- data
-
-			case proto.BLOCK_UPDATE:
-				var data proto.BlockUpdate
-				err = d.Decode(&data)
-				if err != nil {
-					panic(err)
-				}
-				serverRead <- data
-
-			default:
-				panic("unknown packet type")
-			}
-		}
-	}()
 
 	// Read play event
 	msg := (<-serverRead).(proto.Play)
@@ -168,7 +98,9 @@ func Start() {
 	player.LookElevation = msg.Player.LookElevation
 	player.Yaw = msg.Player.Yaw
 	player.Inventory = msg.Inventory
+	player.Hotbar = msg.Hotbar
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
+	renderers.Win.SetScrollCallback(player.ScrollCallback)
 
 	// Initialize inputs
 	mouseOne := new(core.Debounced)
@@ -248,12 +180,12 @@ func Start() {
 			core.TraceRay(player.LookDir(), player.CameraPos(), 16, func(v, h mgl32.Vec3) (stop bool) {
 				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 				if block.Type != nil {
-					serverWrite.Encode(proto.BLOCK_DIG)
-					serverWrite.Encode(proto.BlockDig{
+					serverWrite <- proto.BLOCK_DIG
+					serverWrite <- proto.BlockDig{
 						Position:      block.Position,
 						SubvoxelHit:   h,
 						FinishDigging: true, // TODO implement survival digging
-					})
+					}
 
 					return true
 				} else {
@@ -269,11 +201,11 @@ func Start() {
 			core.TraceRay(player.LookDir(), player.CameraPos(), 16, func(v, h mgl32.Vec3) (stop bool) {
 				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 				if block.Type != nil {
-					serverWrite.Encode(proto.BLOCK_INTERACTION)
-					serverWrite.Encode(proto.BlockInteraction{
+					serverWrite <- proto.BLOCK_INTERACTION
+					serverWrite <- proto.BlockInteraction{
 						Position:    block.Position,
 						SubvoxelHit: h,
-					})
+					}
 
 					return true
 				} else {
@@ -304,7 +236,7 @@ func Start() {
 		}
 
 		// Render gui
-		gui.RenderGame(1, player.Inventory[:9])
+		gui.RenderGame(player.SelectedHotbarSlot, player.Hotbar)
 
 		gui.RenderText(
 			mgl32.Vec2{1, 1},
@@ -398,6 +330,13 @@ func Start() {
 					renderers.UpdateRequiredMeshes(dim, msg.Position)
 
 					dim.Lock.Unlock()
+
+				case proto.EntityEquipment:
+					fmt.Println(msg.HeldItemType)
+
+				case proto.PlayerInventory:
+					player.Hotbar = msg.Hotbar
+					player.Inventory = msg.Inventory
 
 				}
 			default:

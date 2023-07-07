@@ -20,9 +20,11 @@ type Player struct {
 	Speed           float64
 	MouseSensitivty float64
 
-	// First 9 elements for the hotbar, the rest the inventory
-	// from top left in rows
-	Inventory [36]core.ItemStack
+	// Left to right, top to bottom
+	Hotbar    [9]core.ItemStack
+	Inventory [27]core.ItemStack
+
+	SelectedHotbarSlot int
 }
 
 func NewPlayer(position mgl32.Vec3, entityID uuid.UUID) *Player {
@@ -78,13 +80,23 @@ func (p *Player) SetSneaking(b bool) {
 func (p *Player) DoTick() {
 	p.Entity.DoTick()
 
+	// Hotbar slot
+	for i := glfw.Key1; i <= glfw.Key9; i++ {
+		if renderers.Win.GetKey(i) == glfw.Press {
+			p.SelectedHotbarSlot = int(i - glfw.Key1)
+
+			serverWrite <- proto.PLAYER_HELD_ITEM
+			serverWrite <- p.SelectedHotbarSlot
+		}
+	}
+
 	// Jump
 	var jumping bool
 	if renderers.Win.GetKey(glfw.KeySpace) == glfw.Press && p.OnGround() {
 		// TODO Add timeout to next jump
 		p.Velocity[1] = 8.4
 		jumping = true
-		serverWrite.Encode(proto.PLAYER_JUMP)
+		serverWrite <- proto.PLAYER_JUMP
 	}
 
 	// Sneak
@@ -92,20 +104,20 @@ func (p *Player) DoTick() {
 		// Nested for a reason
 		if !p.Sneaking {
 			p.SetSneaking(true)
-			serverWrite.Encode(proto.PLAYER_SNEAKING)
-			serverWrite.Encode(proto.PlayerSneaking(true))
+			serverWrite <- proto.PLAYER_SNEAKING
+			serverWrite <- proto.PlayerSneaking(true)
 		}
 	} else if p.Sneaking {
 		p.SetSneaking(false)
-		serverWrite.Encode(proto.PLAYER_SNEAKING)
-		serverWrite.Encode(proto.PlayerSneaking(false))
+		serverWrite <- proto.PLAYER_SNEAKING
+		serverWrite <- proto.PlayerSneaking(false)
 	}
 
 	// Sprint
 	if renderers.Win.GetKey(glfw.KeyLeftControl) == glfw.Press && !p.Sprinting {
 		p.Sprinting = true
-		serverWrite.Encode(proto.PLAYER_SPRINTING)
-		serverWrite.Encode(proto.PlayerSprinting(true))
+		serverWrite <- proto.PLAYER_SPRINTING
+		serverWrite <- proto.PlayerSprinting(true)
 	}
 
 	var walkVec mgl32.Vec2
@@ -129,8 +141,8 @@ func (p *Player) DoTick() {
 
 	if (walkVec.X() == 0 || p.Sneaking) && p.Sprinting {
 		p.Sprinting = false
-		serverWrite.Encode(proto.PLAYER_SPRINTING)
-		serverWrite.Encode(proto.PlayerSprinting(false))
+		serverWrite <- proto.PLAYER_SPRINTING
+		serverWrite <- proto.PlayerSprinting(false)
 	}
 
 	// Procees horizontal velocity according to
@@ -192,13 +204,23 @@ func (p *Player) DoTick() {
 		p.Velocity[2] += 0.02 * float32(moveMult*math.Cos(direction)*20)
 	}
 
-	serverWrite.Encode(proto.PLAYER_POSITION)
-	serverWrite.Encode(proto.PlayerPosition{
+	serverWrite <- proto.PLAYER_POSITION
+	serverWrite <- proto.PlayerPosition{
 		Position:      p.Position,
 		Yaw:           p.Yaw,
 		LookAzimuth:   p.LookAzimuth,
 		LookElevation: p.LookElevation,
-	})
+	}
+}
+
+func (p *Player) ScrollCallback(_ *glfw.Window, _, yoff float64) {
+	if yoff < 0 && p.SelectedHotbarSlot < 8 {
+		p.SelectedHotbarSlot++
+	} else if yoff > 0 && p.SelectedHotbarSlot > 0 {
+		p.SelectedHotbarSlot--
+	}
+	serverWrite <- proto.PLAYER_HELD_ITEM
+	serverWrite <- p.SelectedHotbarSlot
 }
 
 // Process the mouse input for this frame

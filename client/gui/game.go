@@ -8,7 +8,7 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 )
 
-func RenderGame(selectedHotbarSlot int, hotbarItems []core.ItemStack) {
+func RenderGame(selectedHotbarSlot int, hotbarItems [9]core.ItemStack) {
 	RenderWithAnchor(crosshair, mgl32.Vec2{0, 0}, mgl32.Vec2{0.03, 0.03}, Anchor{0, 0})
 
 	// Render hotbar

@@ -33,6 +33,12 @@ type Entity struct {
 	lerpStartTime time.Time
 	lerpEndPos    mgl32.Vec3
 	lerpEndTime   time.Time
+
+	Equipment EntityEquipment
+}
+
+type EntityEquipment struct {
+	HeldItemType string
 }
 
 type EntityType struct {

@@ -6,6 +6,7 @@ type ItemType struct {
 	Name         string
 	MaxStackSize int
 	RenderType   RenderItemType
+	// TODO Interaction func
 }
 
 type ItemStack struct {

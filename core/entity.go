@@ -79,31 +79,11 @@ func (e *Entity) DoUpdate(deltaT float64, dim *Dimension) {
 	collisionsPerUpdate := 16
 	var yAxisResolved bool
 	for {
-		// Iterate over each block that could intersect the AABB
-		// and get the first one that intersects
-		minX := FloorFloat32(e.Position.X())
-		minY := FloorFloat32(e.Position.Y())
-		minZ := FloorFloat32(e.Position.Z())
-
-		maxX := CeilFloat32(e.Position.X() + e.AABB.X())
-		maxY := CeilFloat32(e.Position.Y() + e.AABB.Y())
-		maxZ := CeilFloat32(e.Position.Z() + e.AABB.Z())
-
-		var intersectingBlock Vec3
-		for x := minX; x < maxX; x++ {
-			for y := minY; y < maxY; y++ {
-				for z := minZ; z < maxZ; z++ {
-					if dim.GetBlockAt(NewVec3(x, y, z)).Type != nil {
-						intersectingBlock = NewVec3(x, y, z)
-						goto resolve
-					}
-				}
-			}
+		intersectingBlock, intersects := e.GetBlockIntersecting(dim)
+		if !intersects {
+			break
 		}
 
-		break
-
-	resolve:
 		// Calculate penetration time of the entity in the block
 		// (How long ago did the entity start penetrating this block)
 		var penTime mgl32.Vec3
@@ -188,6 +168,31 @@ func (e *Entity) DoUpdate(deltaT float64, dim *Dimension) {
 	} else if e.Velocity.Y() != 0 {
 		e.onGround = false
 	}
+}
+
+// Gets the first block that with the entity's AABB
+func (e *Entity) GetBlockIntersecting(dim *Dimension) (block Vec3, intersects bool) {
+	// Iterate over each block that could intersect the AABB
+	// and get the first one that intersects
+	minX := FloorFloat32(e.Position.X())
+	minY := FloorFloat32(e.Position.Y())
+	minZ := FloorFloat32(e.Position.Z())
+
+	maxX := CeilFloat32(e.Position.X() + e.AABB.X())
+	maxY := CeilFloat32(e.Position.Y() + e.AABB.Y())
+	maxZ := CeilFloat32(e.Position.Z() + e.AABB.Z())
+
+	for x := minX; x < maxX; x++ {
+		for y := minY; y < maxY; y++ {
+			for z := minZ; z < maxZ; z++ {
+				if dim.GetBlockAt(NewVec3(x, y, z)).Type != nil {
+					return NewVec3(x, y, z), true
+				}
+			}
+		}
+	}
+
+	return Vec3{}, false
 }
 
 // Physics ticks happen at 20Hz, whereas physics updates are dependent

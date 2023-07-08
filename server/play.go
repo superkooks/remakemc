@@ -169,14 +169,17 @@ func (c *Client) HandlePlayerPosition(p proto.PlayerPosition) {
 func (c *Client) HandleBlockInteraction(b proto.BlockInteraction) {
 	// TODO Check for reach
 
+	// Check whether the player is inside the block
+	// Nasty hack to use entity function
+
 	if c.Hotbar[c.HotbarSlotSelected].IsEmpty() {
 		// TODO Error
 		return
 	}
 
-	Dim.Lock.Lock()
-
 	// TODO Support interactions
+
+	Dim.Lock.Lock()
 
 	// Place the block
 	face := core.FaceFromSubvoxel(b.SubvoxelHit)
@@ -186,6 +189,16 @@ func (c *Client) HandleBlockInteraction(b proto.BlockInteraction) {
 		Type: core.BlockRegistry[c.Hotbar[c.HotbarSlotSelected].Item], // TODO item interact
 	}
 	Dim.SetBlockAt(newBlock)
+
+	// See whether the entity will intersect with this block
+	e := &core.Entity{Position: c.Position.Position, AABB: mgl32.Vec3{0.6, 1.8, 0.6}}
+	if _, intersects := e.GetBlockIntersecting(Dim); intersects {
+		// Remove the block
+		Dim.SetBlockAt(core.Block{Position: newBlock.Position, Type: nil})
+
+		Dim.Lock.Unlock()
+		return
+	}
 
 	// Decrement itemstack and update clint
 	c.Hotbar[c.HotbarSlotSelected].Count--

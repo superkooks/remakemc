@@ -163,26 +163,18 @@ func (e *Entity) DoUpdate(deltaT float64, dim *Dimension) {
 			penTime[2] = mgl32.InfNeg
 		}
 
-		// Resolve Y on first collision
-		if collisionsPerUpdate == 16 && penTime.Y() > -0.03 {
-			e.Position[1] += penTime.Y() * e.Velocity.Y()
-			e.Velocity[1] = 0
-			yAxisResolved = true
-			continue
-		}
-
 		// Resolve the penetration by translating the entity to the latest time
 		// the intersection could have happened
-		if penTime.Y() >= penTime.X() && penTime.Y() >= penTime.Z() {
-			e.Position[1] += penTime.Y() * e.Velocity.Y()
-			e.Velocity[1] = 0
-			yAxisResolved = true
-		} else if penTime.X() >= penTime.Y() && penTime.X() >= penTime.Z() {
+		if penTime.X() >= penTime.Y() && penTime.X() >= penTime.Z() {
 			e.Position[0] += penTime.X() * e.Velocity.X()
 			e.Velocity[0] = 0
 		} else if penTime.Z() >= penTime.X() && penTime.Z() >= penTime.Y() {
 			e.Position[2] += penTime.Z() * e.Velocity.Z()
 			e.Velocity[2] = 0
+		} else if penTime.Y() >= penTime.X() && penTime.Y() >= penTime.Z() {
+			e.Position[1] += penTime.Y() * e.Velocity.Y()
+			e.Velocity[1] = 0
+			yAxisResolved = true
 		}
 
 		collisionsPerUpdate--

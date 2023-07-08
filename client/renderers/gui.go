@@ -13,6 +13,8 @@ type GUIElem struct {
 	VertCount int
 }
 
+var tintVAO uint32
+
 func initGUI() {
 	// Compile shaders
 	guiVert, err := compileShader(`
@@ -54,6 +56,23 @@ void main() {
 	gl.AttachShader(guiProg, guiVert)
 	gl.AttachShader(guiProg, guiFrag)
 	gl.LinkProgram(guiProg)
+
+	// Create tint VAO
+	verts := GlBufferFrom([]float32{
+		-1, -1, 1,
+		1, -1, 1,
+		1, 1, 1,
+		1, 1, 1,
+		-1, 1, 1,
+		-1, -1, 1,
+	})
+
+	gl.GenVertexArrays(1, &tintVAO)
+	gl.BindVertexArray(tintVAO)
+
+	gl.EnableVertexAttribArray(0)
+	gl.BindBuffer(gl.ARRAY_BUFFER, verts)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, nil) // vec3
 }
 
 func RenderGUIElement(e GUIElem, start, end mgl32.Vec2) {
@@ -75,4 +94,21 @@ func RenderGUIElement(e GUIElem, start, end mgl32.Vec2) {
 	// Draw
 	gl.BindVertexArray(e.VAO)
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(e.VertCount))
+}
+
+func TintScreen(colorIn mgl32.Vec4) {
+	s := compiledShaders["mc:tint_screen"]
+	gl.UseProgram(s.Program)
+
+	// Blend transparency and disable depth test
+	gl.Enable(gl.BLEND)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+	gl.Disable(gl.DEPTH_TEST)
+
+	// Set model uniform to color
+	gl.Uniform4fv(s.Uniforms["color_in"], 1, &colorIn[0])
+
+	// Draw
+	gl.BindVertexArray(tintVAO)
+	gl.DrawArrays(gl.TRIANGLES, 0, 6)
 }

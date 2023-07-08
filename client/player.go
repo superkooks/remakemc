@@ -76,9 +76,38 @@ func (p *Player) SetSneaking(b bool) {
 	}
 }
 
+var inventoryButton = new(core.Debounced)
+var escButton = new(core.Debounced)
+
 // Process the keyboard input and physics for this frame
 func (p *Player) DoTick() {
 	p.Entity.DoTick()
+
+	// Inventory mode
+	if inventoryOpen {
+		if renderers.Win.GetKey(glfw.KeyE) == glfw.Press && inventoryButton.Invoke() {
+			CloseInventory()
+		} else if renderers.Win.GetKey(glfw.KeyE) == glfw.Release {
+			inventoryButton.Reset()
+		}
+
+		if renderers.Win.GetKey(glfw.KeyEscape) == glfw.Press && escButton.Invoke() {
+			CloseInventory()
+		} else if renderers.Win.GetKey(glfw.KeyEscape) == glfw.Release {
+			escButton.Reset()
+		}
+
+		// We still need to calculate drag
+		slipperiness := 1.0
+		if p.OnGround() {
+			slipperiness = 0.6
+		}
+
+		p.Velocity[0] *= float32(0.91 * slipperiness)
+		p.Velocity[2] *= float32(0.91 * slipperiness)
+
+		return
+	}
 
 	// Hotbar slot
 	for i := glfw.Key1; i <= glfw.Key9; i++ {
@@ -88,6 +117,17 @@ func (p *Player) DoTick() {
 			serverWrite <- proto.PLAYER_HELD_ITEM
 			serverWrite <- p.SelectedHotbarSlot
 		}
+	}
+
+	// Open inventory
+	if renderers.Win.GetKey(glfw.KeyE) == glfw.Press && inventoryButton.Invoke() {
+		OpenInventory()
+	} else if renderers.Win.GetKey(glfw.KeyE) == glfw.Release {
+		inventoryButton.Reset()
+	}
+
+	if renderers.Win.GetKey(glfw.KeyEscape) == glfw.Release {
+		escButton.Reset()
 	}
 
 	// Jump

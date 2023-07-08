@@ -25,6 +25,7 @@ import (
 var serverRead chan interface{}
 var serverWrite chan interface{}
 var conn *net.TCPConn
+var player *Player
 
 type meshDone struct {
 	position    core.Vec3
@@ -93,7 +94,7 @@ func Start() {
 	fmt.Println("Generated initial terrain VAOs in", time.Since(t))
 
 	// Initialize player
-	player := NewPlayer(msg.Player.Position, msg.Player.EntityID)
+	player = NewPlayer(msg.Player.Position, msg.Player.EntityID)
 	player.LookAzimuth = msg.Player.LookAzimuth
 	player.LookElevation = msg.Player.LookElevation
 	player.Yaw = msg.Player.Yaw
@@ -152,7 +153,7 @@ func Start() {
 		gl.Enable(gl.DEBUG_OUTPUT)
 
 		// Process user input and recalculate view matrix
-		if renderers.IsWindowFocused() {
+		if renderers.IsWindowFocused() && !inventoryOpen {
 			player.ProcessMousePosition(deltaTime)
 		}
 		player.DoUpdate(deltaTime, dim)
@@ -176,7 +177,7 @@ func Start() {
 		}
 
 		// Mining
-		if renderers.Win.GetMouseButton(glfw.MouseButton1) == glfw.Press && mouseOne.Invoke() {
+		if !inventoryOpen && renderers.Win.GetMouseButton(glfw.MouseButton1) == glfw.Press && mouseOne.Invoke() {
 			core.TraceRay(player.LookDir(), player.CameraPos(), 16, func(v, h mgl32.Vec3) (stop bool) {
 				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 				if block.Type != nil {
@@ -197,7 +198,7 @@ func Start() {
 		}
 
 		// Placing
-		if renderers.Win.GetMouseButton(glfw.MouseButton2) == glfw.Press && mouseTwo.Invoke() {
+		if !inventoryOpen && renderers.Win.GetMouseButton(glfw.MouseButton2) == glfw.Press && mouseTwo.Invoke() {
 			core.TraceRay(player.LookDir(), player.CameraPos(), 16, func(v, h mgl32.Vec3) (stop bool) {
 				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 				if block.Type != nil {
@@ -243,6 +244,10 @@ func Start() {
 			fmt.Sprintf("%0.1f fps", 1/(cumulativeTime/float64(frames))),
 			gui.Anchor{Vertical: 1, Horizontal: 1},
 		)
+
+		if inventoryOpen {
+			gui.RenderInventory(player.Inventory, player.Hotbar)
+		}
 
 		// Update window
 		glfw.PollEvents()

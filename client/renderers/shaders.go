@@ -186,4 +186,42 @@ void main() {
 
 		return &shad
 	}
+
+	ReusableShaders["mc:tint_screen"] = func() *Shader {
+		vert, err := compileShader(`
+#version 410
+
+layout (location = 0) in vec3 vp;
+
+void main() {
+	gl_Position = vec4(vp, 1);
+}`+"\x00", gl.VERTEX_SHADER)
+		if err != nil {
+			panic(err)
+		}
+
+		frag, err := compileShader(`
+#version 410
+
+uniform vec4 color_in;
+out vec4 color_out;
+
+void main() {
+	color_out = color_in;
+}`+"\x00", gl.FRAGMENT_SHADER)
+		if err != nil {
+			panic(err)
+		}
+
+		prog := gl.CreateProgram()
+		gl.AttachShader(prog, vert)
+		gl.AttachShader(prog, frag)
+		gl.LinkProgram(prog)
+
+		shad := Shader{Program: prog, Uniforms: make(map[string]int32)}
+
+		shad.Uniforms["color_in"] = gl.GetUniformLocation(prog, gl.Str("color_in\x00"))
+
+		return &shad
+	}
 }

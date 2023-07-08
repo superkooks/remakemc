@@ -16,6 +16,9 @@ func (c *Client) HandleJoin(j proto.Join) {
 	c.Username = j.Username
 	c.Hotbar[6] = core.ItemStack{Item: items.Cobblestone.Name, Count: 64}
 	c.Hotbar[5] = core.ItemStack{Item: items.Dirt.Name, Count: 64}
+	c.Inventory[5] = core.ItemStack{Item: items.Cobblestone.Name, Count: 23}
+	c.Inventory[9] = core.ItemStack{Item: items.Cobblestone.Name, Count: 23}
+	c.Inventory[26] = core.ItemStack{Item: items.Cobblestone.Name, Count: 23}
 
 	// Reply with a play event
 	var msg proto.Play

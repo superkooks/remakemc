@@ -102,7 +102,6 @@ func (p *Player) DoTick() {
 		if p.OnGround() {
 			slipperiness = 0.6
 		}
-
 		p.Velocity[0] *= float32(0.91 * slipperiness)
 		p.Velocity[2] *= float32(0.91 * slipperiness)
 
@@ -269,7 +268,7 @@ func (p *Player) ProcessMousePosition(deltaT float64) {
 	xpos, ypos := renderers.Win.GetCursorPos()
 
 	if ypos < 0 {
-		// User is grabbing title bar, ignore it
+		// Player is grabbing title bar, ignore it
 		return
 	}
 

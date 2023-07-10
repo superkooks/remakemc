@@ -75,8 +75,8 @@ func readFromNet(serverRead chan interface{}) {
 			}
 			serverRead <- data
 
-		case proto.PLAYER_INVENTORY:
-			var data proto.PlayerInventory
+		case proto.CONTAINER_CONTENTS:
+			var data proto.ContainerContents
 			err = d.Decode(&data)
 			if err != nil {
 				panic(err)

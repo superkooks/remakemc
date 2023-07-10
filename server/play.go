@@ -206,10 +206,10 @@ func (c *Client) HandleBlockInteraction(b proto.BlockInteraction) {
 		c.Hotbar[c.HotbarSlotSelected].Item = ""
 	}
 
-	c.SendQueue <- proto.PLAYER_INVENTORY
-	c.SendQueue <- proto.PlayerInventory{
-		Hotbar:    c.Hotbar,
-		Inventory: c.Inventory,
+	c.SendQueue <- proto.CONTAINER_CONTENTS
+	c.SendQueue <- proto.ContainerContents{
+		Slots:         append(c.Hotbar[:], c.Inventory[:]...),
+		FloatingStack: core.ItemStack{},
 	}
 
 	// If needed update player's equipment

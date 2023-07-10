@@ -49,11 +49,13 @@ func RenderGame(selectedHotbarSlot int, hotbarItems [9]core.ItemStack) {
 			item := core.ItemRegistry[hotbarItems[i].Item]
 			item.RenderType.RenderItem(item, start, end)
 
-			RenderText(
-				mgl32.Vec2{-hwidth/2 + slotAdvance*float32(i+1), -1 + ((selectorWidth-slotWidth)/2+slotWidth/22*2)*renderers.GetAspectRatio()},
-				fmt.Sprint(hotbarItems[i].Count),
-				Anchor{Horizontal: 1, Vertical: -1},
-			)
+			if hotbarItems[i].Count > 1 {
+				RenderText(
+					mgl32.Vec2{-hwidth/2 + slotAdvance*float32(i+1), -1 + ((selectorWidth-slotWidth)/2+slotWidth/22*2)*renderers.GetAspectRatio()},
+					fmt.Sprint(hotbarItems[i].Count),
+					Anchor{Horizontal: 1, Vertical: -1},
+				)
+			}
 		}
 	}
 }

@@ -17,9 +17,9 @@ type EntityEquipment struct {
 	EntityID uuid.UUID
 }
 
-// Updates the contents of the inventory of the player.
-// Sent by the server
-type PlayerInventory struct {
-	Hotbar    [9]core.ItemStack
-	Inventory [27]core.ItemStack
+// Updates the contents of the currently open screen.
+// Sent by clients and the server
+type ContainerContents struct {
+	Slots         []core.ItemStack
+	FloatingStack core.ItemStack
 }

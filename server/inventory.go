@@ -13,7 +13,7 @@ func (c *Client) HandlePlayerHeldItem(h proto.PlayerHeldItem) {
 
 	c.HotbarSlotSelected = int(h)
 
-	// Update other clients about the user's new held item
+	// Update other clients about the client's new held item
 	for _, v := range clients {
 		if v != c {
 			v.SendQueue <- proto.ENTITY_EQUIPMENT
@@ -25,4 +25,18 @@ func (c *Client) HandlePlayerHeldItem(h proto.PlayerHeldItem) {
 			}
 		}
 	}
+}
+
+func (c *Client) HandleContainerContents(m proto.ContainerContents) {
+	// TODO validate items not being duplicated
+
+	// TODO Update only clients who are looking at this container
+
+	// TODO Add support for non-inventories (proto level)
+
+	copy(c.Hotbar[:], m.Slots[:9])
+	copy(c.Inventory[:], m.Slots[9:])
+
+	c.SendQueue <- proto.CONTAINER_CONTENTS
+	c.SendQueue <- m
 }

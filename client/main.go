@@ -35,6 +35,9 @@ type meshDone struct {
 	lightLevels []float32
 }
 
+var mouseOne = new(core.Debounced)
+var mouseTwo = new(core.Debounced)
+
 func Start() {
 	runtime.LockOSThread()
 
@@ -103,10 +106,6 @@ func Start() {
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
 	renderers.Win.SetScrollCallback(player.ScrollCallback)
 
-	// Initialize inputs
-	mouseOne := new(core.Debounced)
-	mouseTwo := new(core.Debounced)
-
 	// Get all tickers
 	var allTickers []core.Tickable
 	allTickers = append(allTickers, player)
@@ -132,6 +131,7 @@ func Start() {
 	var frames int
 	var cumulativeTime float64
 	var collectedDelta float64
+	var floatingStack core.ItemStack
 	for !renderers.Win.ShouldClose() {
 		// Get delta time
 		windowTime := glfw.GetTime()
@@ -152,7 +152,7 @@ func Start() {
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 		gl.Enable(gl.DEBUG_OUTPUT)
 
-		// Process user input and recalculate view matrix
+		// Process input and recalculate view matrix
 		if renderers.IsWindowFocused() && !inventoryOpen {
 			player.ProcessMousePosition(deltaTime)
 		}
@@ -246,7 +246,8 @@ func Start() {
 		)
 
 		if inventoryOpen {
-			gui.RenderInventory(player.Inventory, player.Hotbar)
+			i, h := gui.RenderInventory(player.Inventory, player.Hotbar, floatingStack)
+			ProcessContainerInteraction(i, h, player.Inventory, player.Hotbar, floatingStack)
 		}
 
 		// Update window
@@ -339,10 +340,10 @@ func Start() {
 				case proto.EntityEquipment:
 					fmt.Println(msg.HeldItemType)
 
-				case proto.PlayerInventory:
-					player.Hotbar = msg.Hotbar
-					player.Inventory = msg.Inventory
-
+				case proto.ContainerContents:
+					copy(player.Hotbar[:], msg.Slots[:9])
+					copy(player.Inventory[:], msg.Slots[9:])
+					floatingStack = msg.FloatingStack
 				}
 			default:
 				break outer

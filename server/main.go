@@ -112,6 +112,15 @@ func (c *Client) Listen() {
 
 			c.HandlePlayerHeldItem(h)
 
+		case proto.CONTAINER_CONTENTS:
+			var m proto.ContainerContents
+			err := d.Decode(&m)
+			if err != nil {
+				panic(err)
+			}
+
+			c.HandleContainerContents(m)
+
 		default:
 			fmt.Println("unrecognized message from client, disconnecting them")
 			// TODO Cleanup client data

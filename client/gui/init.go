@@ -14,8 +14,8 @@ func Init() {
 	initFromAssets("crosshair.png", &crosshair)
 	initFromAssets("hotbar.png", &hotbar)
 	initFromAssets("hotbar_selected.png", &hotbarSelected)
-	initFromAssets("inventory.png", &inventory)
-	initFromAssets("slot_highlight.png", &slotHighlight)
+	initFromAssets("inventory.png", &Inventory)
+	initFromAssets("slot_highlight.png", &SlotHighlight)
 }
 
 func initFromAssets(fileName string, target *renderers.GUIElem) {
@@ -84,5 +84,5 @@ func initFromAssets(fileName string, target *renderers.GUIElem) {
 var crosshair renderers.GUIElem
 var hotbar renderers.GUIElem
 var hotbarSelected renderers.GUIElem
-var inventory renderers.GUIElem
-var slotHighlight renderers.GUIElem
+var Inventory renderers.GUIElem
+var SlotHighlight renderers.GUIElem

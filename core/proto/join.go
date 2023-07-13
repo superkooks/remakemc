@@ -14,6 +14,5 @@ type Join struct {
 type Play struct {
 	Player        EntityPosition
 	InitialChunks LoadChunks
-	Hotbar        [9]core.ItemStack
-	Inventory     [27]core.ItemStack
+	Inventory     []core.ItemStack
 }

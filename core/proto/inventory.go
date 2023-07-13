@@ -3,6 +3,7 @@ package proto
 import (
 	"remakemc/core"
 
+	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/google/uuid"
 )
 
@@ -18,8 +19,19 @@ type EntityEquipment struct {
 }
 
 // Updates the contents of the currently open screen.
-// Sent by clients and the server
+// Sent by the server
 type ContainerContents struct {
 	Slots         []core.ItemStack
 	FloatingStack core.ItemStack
+}
+
+// Sent when the player clicks on a slot in a container
+type ContainerClick struct {
+	SlotIndex int
+
+	// Which keys were pressed
+	LeftClick  bool
+	RightClick bool
+	ShiftKey   glfw.Action
+	NumberKey  int
 }

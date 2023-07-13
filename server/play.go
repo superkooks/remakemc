@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"remakemc/config"
 	"remakemc/core"
+	"remakemc/core/container"
 	"remakemc/core/items"
 	"remakemc/core/proto"
 
@@ -14,11 +15,12 @@ import (
 func (c *Client) HandleJoin(j proto.Join) {
 	fmt.Println("join event")
 	c.Username = j.Username
-	c.Hotbar[6] = core.ItemStack{Item: items.Cobblestone.Name, Count: 64}
-	c.Hotbar[5] = core.ItemStack{Item: items.Dirt.Name, Count: 64}
-	c.Inventory[5] = core.ItemStack{Item: items.Cobblestone.Name, Count: 23}
-	c.Inventory[9] = core.ItemStack{Item: items.Cobblestone.Name, Count: 23}
-	c.Inventory[26] = core.ItemStack{Item: items.Cobblestone.Name, Count: 23}
+
+	c.Inventory = new(container.Inventory)
+	c.Inventory.Init(false)
+	c.Inventory.Slots[5].SetStack(core.ItemStack{Item: items.Cobblestone.Name, Count: 64})
+	c.Inventory.Slots[6].SetStack(core.ItemStack{Item: items.Cobblestone.Name, Count: 64})
+	c.Inventory.Slots[7].SetStack(core.ItemStack{Item: items.Dirt.Name, Count: 64})
 
 	// Reply with a play event
 	var msg proto.Play
@@ -51,8 +53,7 @@ func (c *Client) HandleJoin(j proto.Join) {
 	msg.InitialChunks = proto.NewLoadChunks(chunks)
 	Dim.Lock.Unlock()
 
-	msg.Hotbar = c.Hotbar
-	msg.Inventory = c.Inventory
+	msg.Inventory = container.GetStacksFromSlots(c.Inventory.GetSlots())
 
 	c.SendQueue <- proto.PLAY
 	c.SendQueue <- msg
@@ -172,7 +173,9 @@ func (c *Client) HandleBlockInteraction(b proto.BlockInteraction) {
 	// Check whether the player is inside the block
 	// Nasty hack to use entity function
 
-	if c.Hotbar[c.HotbarSlotSelected].IsEmpty() {
+	selectedSlot := c.Inventory.GetSlots()[c.HotbarSlotSelected]
+
+	if selectedSlot.GetStack().IsEmpty() {
 		// TODO Error
 		return
 	}
@@ -186,7 +189,7 @@ func (c *Client) HandleBlockInteraction(b proto.BlockInteraction) {
 	newBlock := core.Block{
 		Position: b.Position.Add(core.FaceDirection[face]),
 		// Type:     core.BlockRegistry["mc:cobblestone"],
-		Type: core.BlockRegistry[c.Hotbar[c.HotbarSlotSelected].Item], // TODO item interact
+		Type: core.BlockRegistry[selectedSlot.GetStack().Item], // TODO item interact
 	}
 	Dim.SetBlockAt(newBlock)
 
@@ -201,26 +204,29 @@ func (c *Client) HandleBlockInteraction(b proto.BlockInteraction) {
 	}
 
 	// Decrement itemstack and update clint
-	c.Hotbar[c.HotbarSlotSelected].Count--
-	if c.Hotbar[c.HotbarSlotSelected].Count == 0 {
-		c.Hotbar[c.HotbarSlotSelected].Item = ""
+	s := selectedSlot.GetStack()
+	s.Count--
+	if s.Count == 0 {
+		selectedSlot.SetStack(core.ItemStack{})
+	} else {
+		selectedSlot.SetStack(s)
 	}
 
 	c.SendQueue <- proto.CONTAINER_CONTENTS
 	c.SendQueue <- proto.ContainerContents{
-		Slots:         append(c.Hotbar[:], c.Inventory[:]...),
+		Slots:         container.GetStacksFromSlots(c.Inventory.GetSlots()),
 		FloatingStack: core.ItemStack{},
 	}
 
 	// If needed update player's equipment
-	if c.Hotbar[c.HotbarSlotSelected].Item == "" {
+	if selectedSlot.GetStack().Item == "" {
 		for _, v := range clients {
 			if v != c {
 				v.SendQueue <- proto.ENTITY_EQUIPMENT
 				v.SendQueue <- proto.EntityEquipment{
 					EntityID: c.Position.EntityID,
 					EntityEquipment: core.EntityEquipment{
-						HeldItemType: c.Hotbar[c.HotbarSlotSelected].Item,
+						HeldItemType: selectedSlot.GetStack().Item,
 					},
 				}
 			}

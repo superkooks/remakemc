@@ -9,6 +9,7 @@ import (
 	"remakemc/config"
 	"remakemc/core"
 	"remakemc/core/blocks"
+	"remakemc/core/container"
 	_ "remakemc/core/entities"
 	_ "remakemc/core/items"
 	"remakemc/core/proto"
@@ -101,8 +102,11 @@ func Start() {
 	player.LookAzimuth = msg.Player.LookAzimuth
 	player.LookElevation = msg.Player.LookElevation
 	player.Yaw = msg.Player.Yaw
-	player.Inventory = msg.Inventory
-	player.Hotbar = msg.Hotbar
+
+	player.Inventory = new(container.Inventory)
+	player.Inventory.Init(true)
+	container.SetSlotsFromStacks(msg.Inventory, player.Inventory.GetSlots())
+
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
 	renderers.Win.SetScrollCallback(player.ScrollCallback)
 
@@ -131,7 +135,6 @@ func Start() {
 	var frames int
 	var cumulativeTime float64
 	var collectedDelta float64
-	var floatingStack core.ItemStack
 	for !renderers.Win.ShouldClose() {
 		// Get delta time
 		windowTime := glfw.GetTime()
@@ -153,7 +156,7 @@ func Start() {
 		gl.Enable(gl.DEBUG_OUTPUT)
 
 		// Process input and recalculate view matrix
-		if renderers.IsWindowFocused() && !inventoryOpen {
+		if renderers.IsWindowFocused() && !containerOpen {
 			player.ProcessMousePosition(deltaTime)
 		}
 		player.DoUpdate(deltaTime, dim)
@@ -177,7 +180,7 @@ func Start() {
 		}
 
 		// Mining
-		if !inventoryOpen && renderers.Win.GetMouseButton(glfw.MouseButton1) == glfw.Press && mouseOne.Invoke() {
+		if !containerOpen && renderers.Win.GetMouseButton(glfw.MouseButton1) == glfw.Press && mouseOne.Invoke() {
 			core.TraceRay(player.LookDir(), player.CameraPos(), 16, func(v, h mgl32.Vec3) (stop bool) {
 				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 				if block.Type != nil {
@@ -198,7 +201,7 @@ func Start() {
 		}
 
 		// Placing
-		if !inventoryOpen && renderers.Win.GetMouseButton(glfw.MouseButton2) == glfw.Press && mouseTwo.Invoke() {
+		if !containerOpen && renderers.Win.GetMouseButton(glfw.MouseButton2) == glfw.Press && mouseTwo.Invoke() {
 			core.TraceRay(player.LookDir(), player.CameraPos(), 16, func(v, h mgl32.Vec3) (stop bool) {
 				block := dim.GetBlockAt(core.NewVec3FromFloat(v))
 				if block.Type != nil {
@@ -237,7 +240,7 @@ func Start() {
 		}
 
 		// Render gui
-		gui.RenderGame(player.SelectedHotbarSlot, player.Hotbar)
+		gui.RenderGame(player.SelectedHotbarSlot, container.GetStacksFromSlots(player.Inventory.GetSlots()[:9]))
 
 		gui.RenderText(
 			mgl32.Vec2{1, 1},
@@ -245,9 +248,9 @@ func Start() {
 			gui.Anchor{Vertical: 1, Horizontal: 1},
 		)
 
-		if inventoryOpen {
-			i, h := gui.RenderInventory(player.Inventory, player.Hotbar, floatingStack)
-			ProcessContainerInteraction(i, h, player.Inventory, player.Hotbar, floatingStack)
+		if containerOpen {
+			ProcessContainerInteraction(openContainer)
+			openContainer.Render()
 		}
 
 		// Update window
@@ -341,9 +344,9 @@ func Start() {
 					fmt.Println(msg.HeldItemType)
 
 				case proto.ContainerContents:
-					copy(player.Hotbar[:], msg.Slots[:9])
-					copy(player.Inventory[:], msg.Slots[9:])
-					floatingStack = msg.FloatingStack
+					// TODO Support non-inventories
+					container.SetSlotsFromStacks(msg.Slots, player.Inventory.GetSlots())
+					player.Inventory.SetFloating(msg.FloatingStack)
 				}
 			default:
 				break outer

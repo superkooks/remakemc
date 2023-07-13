@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"remakemc/core"
+	"remakemc/core/container"
 	"remakemc/core/proto"
 	"time"
 
@@ -20,8 +21,7 @@ type Client struct {
 	OldPosition proto.PlayerPosition
 
 	HotbarSlotSelected int
-	Hotbar             [9]core.ItemStack
-	Inventory          [27]core.ItemStack
+	Inventory          *container.Inventory
 
 	loadedChunks []core.Vec3
 }
@@ -112,14 +112,14 @@ func (c *Client) Listen() {
 
 			c.HandlePlayerHeldItem(h)
 
-		case proto.CONTAINER_CONTENTS:
-			var m proto.ContainerContents
+		case proto.CONTAINER_CLICK:
+			var m proto.ContainerClick
 			err := d.Decode(&m)
 			if err != nil {
 				panic(err)
 			}
 
-			c.HandleContainerContents(m)
+			c.HandleContainerClick(m)
 
 		default:
 			fmt.Println("unrecognized message from client, disconnecting them")

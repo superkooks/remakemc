@@ -4,6 +4,7 @@ import (
 	"math"
 	"remakemc/client/renderers"
 	"remakemc/core"
+	"remakemc/core/container"
 	"remakemc/core/proto"
 
 	"github.com/go-gl/glfw/v3.2/glfw"
@@ -20,10 +21,7 @@ type Player struct {
 	Speed           float64
 	MouseSensitivty float64
 
-	// Left to right, top to bottom
-	Hotbar    [9]core.ItemStack
-	Inventory [27]core.ItemStack
-
+	Inventory          *container.Inventory
 	SelectedHotbarSlot int
 }
 
@@ -84,15 +82,15 @@ func (p *Player) DoTick() {
 	p.Entity.DoTick()
 
 	// Inventory mode
-	if inventoryOpen {
+	if containerOpen {
 		if renderers.Win.GetKey(glfw.KeyE) == glfw.Press && inventoryButton.Invoke() {
-			CloseInventory()
+			CloseContainer()
 		} else if renderers.Win.GetKey(glfw.KeyE) == glfw.Release {
 			inventoryButton.Reset()
 		}
 
 		if renderers.Win.GetKey(glfw.KeyEscape) == glfw.Press && escButton.Invoke() {
-			CloseInventory()
+			CloseContainer()
 		} else if renderers.Win.GetKey(glfw.KeyEscape) == glfw.Release {
 			escButton.Reset()
 		}
@@ -120,7 +118,7 @@ func (p *Player) DoTick() {
 
 	// Open inventory
 	if renderers.Win.GetKey(glfw.KeyE) == glfw.Press && inventoryButton.Invoke() {
-		OpenInventory()
+		OpenContainer(player.Inventory)
 	} else if renderers.Win.GetKey(glfw.KeyE) == glfw.Release {
 		inventoryButton.Reset()
 	}

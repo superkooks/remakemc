@@ -21,7 +21,9 @@ func initEntity() {
 	}
 
 	for _, v := range core.EntityRegistry {
-		v.RenderType.Init()
+		if v.RenderType != nil {
+			v.RenderType.Init()
+		}
 	}
 }
 

@@ -43,6 +43,9 @@ type BlockType struct {
 	// any way, or if the block does not take up the full area.
 	Transparent bool
 	RenderType  RenderBlockType
+
+	// The type of the entity that will be linked with with block.
+	LinkWithEntity string
 }
 
 type RenderBlockType interface {

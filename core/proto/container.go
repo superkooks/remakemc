@@ -19,6 +19,7 @@ type EntityEquipment struct {
 }
 
 // Updates the contents of the currently open screen.
+// May also be sent with by the CONTAINER_OPEN event.
 // Sent by the server
 type ContainerContents struct {
 	EntityID      uuid.UUID
@@ -27,6 +28,7 @@ type ContainerContents struct {
 }
 
 // Sent when the player clicks on a slot in a container
+// Sent by clients
 type ContainerClick struct {
 	EntityID  uuid.UUID
 	SlotIndex int

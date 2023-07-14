@@ -8,7 +8,7 @@ import (
 	"remakemc/client/renderers"
 	"remakemc/config"
 	"remakemc/core"
-	"remakemc/core/blocks"
+	_ "remakemc/core/blocks"
 	"remakemc/core/container"
 	_ "remakemc/core/entities"
 	_ "remakemc/core/items"
@@ -21,6 +21,7 @@ import (
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/go-gl/mathgl/mgl32"
+	"github.com/google/uuid"
 )
 
 var serverRead chan interface{}
@@ -43,10 +44,12 @@ func Start() {
 	runtime.LockOSThread()
 
 	// Initialize texture atlas
-	blocks.Grass.RenderType.Init()
-	blocks.Dirt.RenderType.Init()
-	blocks.Stone.RenderType.Init()
-	blocks.Cobblestone.RenderType.Init()
+	for _, v := range core.BlockRegistry {
+		if v == nil {
+			continue
+		}
+		v.RenderType.Init()
+	}
 
 	// Initialize OpenGL and GLFW
 	renderers.InitAll(config.App.Client.DefaultWidth, config.App.Client.DefaultHeight)
@@ -145,7 +148,6 @@ func Start() {
 		frames++
 		cumulativeTime += deltaTime
 		if frames == 60 {
-			fmt.Println(1/(cumulativeTime/60), "fps")
 			frames = 0
 			cumulativeTime = 0
 		}
@@ -236,7 +238,10 @@ func Start() {
 
 		// Render all entities
 		for _, v := range dim.Entities {
-			core.EntityRegistry[v.EntityType].RenderType.RenderEntity(v, view)
+			r := core.EntityRegistry[v.EntityType].RenderType
+			if r != nil {
+				r.RenderEntity(v, view)
+			}
 		}
 
 		// Render gui
@@ -299,14 +304,27 @@ func Start() {
 						Position:      msg.Position,
 						AABB:          msg.AABB,
 						EntityType:    msg.EntityType,
-						Lerp:          true,
 						Yaw:           msg.Yaw,
 						Pitch:         msg.Pitch,
 						LookAzimuth:   msg.LookAzimuth,
 						LookElevation: msg.LookElevation,
 					}
-					e.NewLerp(msg.Position)
+					typ := core.EntityRegistry[msg.EntityType]
+					e.IsBlock = typ.IsBlock
+
+					if !e.IsBlock {
+						e.Lerp = true
+						e.NewLerp(msg.Position)
+					}
 					dim.Entities = append(dim.Entities, e)
+
+				case proto.EntityDelete:
+					for k, v := range dim.Entities {
+						if v.ID == uuid.UUID(msg) {
+							dim.Entities = append(dim.Entities[:k], dim.Entities[k+1:]...)
+							break
+						}
+					}
 
 				case proto.EntityPosition:
 					if msg.EntityID == player.ID {

@@ -24,6 +24,50 @@ func (t BlockBasicOneTex) RenderFace(face core.BlockFace, pos mgl32.Vec3) (verts
 	return
 }
 
+type BlockBasicSixTex struct {
+	Top    string
+	Bottom string
+	Left   string
+	Right  string
+	Front  string
+	Back   string
+}
+
+func (t BlockBasicSixTex) Init() {
+	BlockAtlas.AddTexFromAssets(t.Top)
+	BlockAtlas.AddTexFromAssets(t.Bottom)
+	BlockAtlas.AddTexFromAssets(t.Left)
+	BlockAtlas.AddTexFromAssets(t.Right)
+	BlockAtlas.AddTexFromAssets(t.Front)
+	BlockAtlas.AddTexFromAssets(t.Bottom)
+}
+
+func (t BlockBasicSixTex) RenderFace(face core.BlockFace, pos mgl32.Vec3) (verts, normals, uvs []float32) {
+	var tex string
+	switch face {
+	case core.FaceTop:
+		tex = t.Top
+	case core.FaceBottom:
+		tex = t.Bottom
+	case core.FaceLeft:
+		tex = t.Left
+	case core.FaceRight:
+		tex = t.Right
+	case core.FaceFront:
+		tex = t.Front
+	case core.FaceBack:
+		tex = t.Back
+	}
+
+	atlasStart, atlasEnd := BlockAtlas.GetUV(tex)
+
+	verts = makeFace(faceVertices[face], pos)
+	normals = MakeNormals(verts)
+	uvs = makeUVs(faceUVs[face], atlasStart, atlasEnd)
+
+	return
+}
+
 // Add a position to a face
 func makeFace(face []float32, pos mgl32.Vec3) []float32 {
 	newV := make([]float32, 3*6)

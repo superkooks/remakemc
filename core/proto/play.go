@@ -67,6 +67,8 @@ type EntityCreate struct {
 	EntityType string
 }
 
+type EntityDelete uuid.UUID
+
 // Instructs the client to unload the chunk
 // Sent by the server
 type UnloadChunks []core.Vec3

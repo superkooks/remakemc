@@ -24,3 +24,16 @@ var Cobblestone = core.AddBlockToRegistry(&core.BlockType{
 	Name:       "mc:cobblestone",
 	RenderType: renderers.BlockBasicOneTex{Tex: "cobblestone"},
 })
+
+var Furnace = core.AddBlockToRegistry(&core.BlockType{
+	Name:           "mc:furnace",
+	LinkWithEntity: "mc:furnace",
+	RenderType: renderers.BlockBasicSixTex{
+		Top:    "furnace_top",
+		Bottom: "furnace_top",
+		Left:   "furnace_side",
+		Right:  "furnace_side",
+		Front:  "furnace_front",
+		Back:   "furnace_side",
+	},
+})

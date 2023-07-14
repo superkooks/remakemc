@@ -36,3 +36,11 @@ var Stone = core.AddItemToRegistry(&core.ItemType{
 		Block: "mc:stone",
 	},
 })
+
+var Furnace = core.AddItemToRegistry(&core.ItemType{
+	Name:         "mc:furnace",
+	MaxStackSize: 64,
+	RenderType: &renderers.ItemFromBlock{
+		Block: "mc:furnace",
+	},
+})

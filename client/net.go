@@ -51,6 +51,16 @@ func readFromNet(serverRead chan interface{}) {
 			}
 			serverRead <- data
 
+		case proto.ENTITY_DELETE:
+			fmt.Println("received entity delete")
+
+			var data proto.EntityDelete
+			err = d.Decode(&data)
+			if err != nil {
+				panic(err)
+			}
+			serverRead <- data
+
 		case proto.ENTITY_POSITION:
 			var data proto.EntityPosition
 			err = d.Decode(&data)

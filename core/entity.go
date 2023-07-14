@@ -18,7 +18,6 @@ type Entity struct {
 	EntityType string
 
 	Inventory Container
-	// Update func(e *Entity) // Called every tick
 
 	// Used for block entities, like furnaces. Disables physics.
 	IsBlock bool
@@ -50,6 +49,11 @@ type EntityEquipment struct {
 type EntityType struct {
 	Name       string
 	RenderType RenderEntityType
+	IsBlock    bool
+
+	// Triggered by right click
+	// PlayerInteraction func(e *Entity, Dim *Dimension)
+	// Update func(e *Entity) // Called every tick
 }
 
 type RenderEntityType interface {
@@ -65,6 +69,11 @@ func (e *Entity) NewLerp(end mgl32.Vec3) {
 }
 
 func (e *Entity) DoUpdate(deltaT float64, dim *Dimension) {
+	// If block, disable
+	if e.IsBlock {
+		return
+	}
+
 	// If lerping, do lerp
 	if e.Lerp {
 		lerpDelta := e.lerpEndTime.Sub(e.lerpStartTime)
@@ -204,7 +213,7 @@ func (e *Entity) GetBlockIntersecting(dim *Dimension) (block Vec3, intersects bo
 // Physics ticks happen at 20Hz, whereas physics updates are dependent
 // on the deltaT
 func (e *Entity) DoTick() {
-	if !e.NoGravity {
+	if !e.NoGravity && !e.IsBlock {
 		// Update the entity's velocity based on the minecraft movement formula
 		// https://www.mcpk.wiki/wiki/Vertical_Movement_Formulas
 		// Note that we do things in m/s, not m/tick

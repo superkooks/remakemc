@@ -31,6 +31,7 @@ func (c *Client) HandleJoin(j proto.Join) {
 	c.Inventory.Slots[5].SetStack(core.ItemStack{Item: items.Cobblestone.Name, Count: 64})
 	c.Inventory.Slots[6].SetStack(core.ItemStack{Item: items.Cobblestone.Name, Count: 64})
 	c.Inventory.Slots[7].SetStack(core.ItemStack{Item: items.Dirt.Name, Count: 64})
+	c.Inventory.Slots[0].SetStack(core.ItemStack{Item: items.Furnace.Name, Count: 1})
 
 	// Determine the chunks to load
 	Dim.Lock.Lock()
@@ -81,6 +82,20 @@ func (c *Client) HandleJoin(j proto.Join) {
 				EntityPosition: proto.EntityPosition(v.Position),
 				EntityType:     "mc:remoteplayer",
 			}
+		}
+	}
+	for _, v := range Dim.Entities {
+		c.SendQueue <- proto.ENTITY_CREATE
+		c.SendQueue <- proto.EntityCreate{
+			EntityPosition: proto.EntityPosition{
+				EntityID:      v.ID,
+				Yaw:           v.Yaw,
+				Pitch:         v.Pitch,
+				AABB:          v.AABB,
+				LookAzimuth:   v.LookAzimuth,
+				LookElevation: v.LookElevation,
+			},
+			EntityType: v.EntityType,
 		}
 	}
 }
@@ -181,9 +196,21 @@ func (c *Client) HandleBlockInteraction(b proto.BlockInteraction) {
 		return
 	}
 
-	// TODO Support interactions
-
 	Dim.Lock.Lock()
+
+	// Is the block clicked interactable?
+	old := Dim.GetBlockAt(b.Position)
+	if old.Type.LinkWithEntity != "" {
+		// Find the entity for this block
+		for _, v := range Dim.Entities {
+			if v.Position == b.Position.ToFloat() &&
+				core.BlockRegistry[old.Type.Name].LinkWithEntity == v.EntityType {
+
+				// This has an entity, try to interact
+
+			}
+		}
+	}
 
 	// Place the block
 	face := core.FaceFromSubvoxel(b.SubvoxelHit)
@@ -202,6 +229,34 @@ func (c *Client) HandleBlockInteraction(b proto.BlockInteraction) {
 
 		Dim.Lock.Unlock()
 		return
+	}
+
+	linkEntityType := core.BlockRegistry[selectedSlot.GetStack().Item].LinkWithEntity
+	if linkEntityType != "" {
+		// Create the linked entity
+		e := &core.Entity{
+			ID:         uuid.New(),
+			Position:   newBlock.Position.ToFloat(),
+			EntityType: linkEntityType,
+			IsBlock:    true,
+		}
+
+		Dim.Entities = append(Dim.Entities, e)
+		for _, v := range clients {
+			v.SendQueue <- proto.ENTITY_CREATE
+			v.SendQueue <- proto.EntityCreate{
+				EntityPosition: proto.EntityPosition{
+					EntityID:      e.ID,
+					Position:      e.Position,
+					Yaw:           e.Yaw,
+					Pitch:         e.Pitch,
+					AABB:          e.AABB,
+					LookAzimuth:   e.LookAzimuth,
+					LookElevation: e.LookElevation,
+				},
+				EntityType: e.EntityType,
+			}
+		}
 	}
 
 	// Decrement itemstack and update clint
@@ -260,8 +315,25 @@ func (c *Client) HandleBlockDig(b proto.BlockDig) {
 
 	Dim.Lock.Lock()
 
+	oldBlock := Dim.GetBlockAt(b.Position)
+
 	newBlock := core.Block{Position: b.Position, Type: nil}
 	Dim.SetBlockAt(newBlock)
+
+	// Delete any linked entities
+	for k, v := range Dim.Entities {
+		if v.Position == b.Position.ToFloat() &&
+			core.BlockRegistry[oldBlock.Type.Name].LinkWithEntity == v.EntityType {
+
+			Dim.Entities = append(Dim.Entities[:k], Dim.Entities[k+1:]...)
+
+			for _, w := range clients {
+				w.SendQueue <- proto.ENTITY_DELETE
+				w.SendQueue <- v.ID
+			}
+			break
+		}
+	}
 
 	// Update clients if the chunk is loaded for them
 	chunkPos := Dim.GetChunkContaining(b.Position).Position

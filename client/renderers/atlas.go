@@ -45,6 +45,11 @@ func (a *Atlas) AddTex(i *image.RGBA, name string) {
 // To maximize packing efficiency, ensure all textures are square and
 // have the size side length
 func (a *Atlas) AddTexFromAssets(texname string) {
+	if _, ok := a.textures[texname]; ok {
+		// Already exists
+		return
+	}
+
 	f, err := assets.Files.Open(texname + ".png")
 	if err != nil {
 		panic(err)

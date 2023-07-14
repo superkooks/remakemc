@@ -2,15 +2,15 @@ package client
 
 import (
 	"remakemc/client/renderers"
-	"remakemc/core/container"
+	"remakemc/core"
 
 	"github.com/go-gl/glfw/v3.2/glfw"
 )
 
 var containerOpen bool
-var openContainer container.Container
+var openContainer core.Container
 
-func OpenContainer(c container.Container) {
+func OpenContainer(c core.Container) {
 	containerOpen = true
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorNormal)
 	renderers.Win.SetScrollCallback(nil)

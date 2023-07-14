@@ -6,16 +6,20 @@ import (
 	"remakemc/core"
 
 	"github.com/go-gl/mathgl/mgl32"
+	"github.com/google/uuid"
 )
 
 type Inventory struct {
-	Slots    []Slot
+	EntityID uuid.UUID
+	Slots    []core.Slot
 	Floating core.ItemStack
 
 	slotSize float32
 }
 
-func (c *Inventory) Init(withBoxes bool) {
+func (c *Inventory) Init(withBoxes bool, entityID uuid.UUID) {
+	c.EntityID = entityID
+
 	// Generate slots
 	iwidth := float32(0.8)
 	iheight := iwidth / 170 * 166
@@ -35,7 +39,7 @@ func (c *Inventory) Init(withBoxes bool) {
 			)
 		}
 
-		c.Slots = append(c.Slots, &InventorySlot{
+		c.Slots = append(c.Slots, &core.InventorySlot{
 			Start: start, End: end,
 		})
 	}
@@ -52,14 +56,18 @@ func (c *Inventory) Init(withBoxes bool) {
 				)
 			}
 
-			c.Slots = append(c.Slots, &InventorySlot{
+			c.Slots = append(c.Slots, &core.InventorySlot{
 				Start: start, End: end,
 			})
 		}
 	}
 }
 
-func (c *Inventory) GetSlots() []Slot {
+func (c *Inventory) GetEntityID() uuid.UUID {
+	return c.EntityID
+}
+
+func (c *Inventory) GetSlots() []core.Slot {
 	return c.Slots
 }
 
@@ -79,6 +87,6 @@ func (c *Inventory) Render() {
 
 	gui.RenderWithAnchor(gui.Inventory, mgl32.Vec2{0, 0}, mgl32.Vec2{iwidth, iheight}, gui.Anchor{Horizontal: 0, Vertical: 0})
 
-	RenderSlots(c.GetSlots())
-	RenderFloating(c.GetFloating(), c.slotSize)
+	gui.RenderSlots(c.GetSlots())
+	gui.RenderFloating(c.GetFloating(), c.slotSize)
 }

@@ -16,12 +16,6 @@ func (c *Client) HandleJoin(j proto.Join) {
 	fmt.Println("join event")
 	c.Username = j.Username
 
-	c.Inventory = new(container.Inventory)
-	c.Inventory.Init(false)
-	c.Inventory.Slots[5].SetStack(core.ItemStack{Item: items.Cobblestone.Name, Count: 64})
-	c.Inventory.Slots[6].SetStack(core.ItemStack{Item: items.Cobblestone.Name, Count: 64})
-	c.Inventory.Slots[7].SetStack(core.ItemStack{Item: items.Dirt.Name, Count: 64})
-
 	// Reply with a play event
 	var msg proto.Play
 	msg.Player = proto.EntityPosition{
@@ -30,6 +24,13 @@ func (c *Client) HandleJoin(j proto.Join) {
 	}
 	c.OldPosition = proto.PlayerPosition(msg.Player)
 	c.Position = proto.PlayerPosition(msg.Player)
+
+	// Set the inventory
+	c.Inventory = new(container.Inventory)
+	c.Inventory.Init(false, msg.Player.EntityID)
+	c.Inventory.Slots[5].SetStack(core.ItemStack{Item: items.Cobblestone.Name, Count: 64})
+	c.Inventory.Slots[6].SetStack(core.ItemStack{Item: items.Cobblestone.Name, Count: 64})
+	c.Inventory.Slots[7].SetStack(core.ItemStack{Item: items.Dirt.Name, Count: 64})
 
 	// Determine the chunks to load
 	Dim.Lock.Lock()
@@ -53,7 +54,7 @@ func (c *Client) HandleJoin(j proto.Join) {
 	msg.InitialChunks = proto.NewLoadChunks(chunks)
 	Dim.Lock.Unlock()
 
-	msg.Inventory = container.GetStacksFromSlots(c.Inventory.GetSlots())
+	msg.Inventory = core.GetStacksFromSlots(c.Inventory.GetSlots())
 
 	c.SendQueue <- proto.PLAY
 	c.SendQueue <- msg
@@ -214,7 +215,7 @@ func (c *Client) HandleBlockInteraction(b proto.BlockInteraction) {
 
 	c.SendQueue <- proto.CONTAINER_CONTENTS
 	c.SendQueue <- proto.ContainerContents{
-		Slots:         container.GetStacksFromSlots(c.Inventory.GetSlots()),
+		Slots:         core.GetStacksFromSlots(c.Inventory.GetSlots()),
 		FloatingStack: core.ItemStack{},
 	}
 

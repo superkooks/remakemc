@@ -17,6 +17,12 @@ type Entity struct {
 	NoGravity  bool
 	EntityType string
 
+	Inventory Container
+	// Update func(e *Entity) // Called every tick
+
+	// Used for block entities, like furnaces. Disables physics.
+	IsBlock bool
+
 	// Disables physics and uses linear interpolation instead
 	Lerp bool
 

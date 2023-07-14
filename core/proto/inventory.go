@@ -21,12 +21,14 @@ type EntityEquipment struct {
 // Updates the contents of the currently open screen.
 // Sent by the server
 type ContainerContents struct {
+	EntityID      uuid.UUID
 	Slots         []core.ItemStack
 	FloatingStack core.ItemStack
 }
 
 // Sent when the player clicks on a slot in a container
 type ContainerClick struct {
+	EntityID  uuid.UUID
 	SlotIndex int
 
 	// Which keys were pressed

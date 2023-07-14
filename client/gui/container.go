@@ -1,30 +1,14 @@
-package container
+package gui
 
 import (
 	"fmt"
-	"remakemc/client/gui"
 	"remakemc/client/renderers"
 	"remakemc/core"
 
 	"github.com/go-gl/mathgl/mgl32"
 )
 
-type Container interface {
-	// Init the slots, and anything else. With boxes generates the boxes for an aspect ratio.
-	Init(withBoxes bool)
-
-	// Return the slots of the container
-	GetSlots() []Slot
-
-	// Get and set the floating itemstack
-	GetFloating() core.ItemStack
-	SetFloating(core.ItemStack)
-
-	// Render the entire interface. You may use RenderSlots and RenderFloating as helpers.
-	Render()
-}
-
-func RenderSlots(slots []Slot) {
+func RenderSlots(slots []core.Slot) {
 	// Render the items in their slots
 	for _, v := range slots {
 		if !v.GetStack().IsEmpty() {
@@ -41,10 +25,10 @@ func RenderSlots(slots []Slot) {
 				mgl32.SetMin(&p[1], &start[1])
 
 				// Render count
-				gui.RenderText(
+				RenderText(
 					p,
 					fmt.Sprint(v.GetStack().Count),
-					gui.Anchor{Horizontal: 1, Vertical: -1},
+					Anchor{Horizontal: 1, Vertical: -1},
 				)
 			}
 		}
@@ -61,7 +45,7 @@ func RenderSlots(slots []Slot) {
 		start, end := v.GetBox()
 		if start.X() < cursorX && end.X() > cursorX && start.Y() < cursorY && end.Y() > cursorY {
 			// Render the hover effect
-			renderers.RenderGUIElement(gui.SlotHighlight, start, end)
+			renderers.RenderGUIElement(SlotHighlight, start, end)
 		}
 	}
 }
@@ -79,7 +63,7 @@ func RenderFloating(stack core.ItemStack, slotSize float32) {
 
 	// Render the item
 	i := core.ItemRegistry[stack.Item]
-	start, end := gui.AnchorAt(mgl32.Vec2{cursorX, cursorY}, mgl32.Vec2{slotSize, slotSize}, gui.Anchor{Horizontal: 0, Vertical: 0})
+	start, end := AnchorAt(mgl32.Vec2{cursorX, cursorY}, mgl32.Vec2{slotSize, slotSize}, Anchor{Horizontal: 0, Vertical: 0})
 	i.RenderType.RenderItem(i, start, end)
 
 	if stack.Count > 1 {
@@ -90,23 +74,6 @@ func RenderFloating(stack core.ItemStack, slotSize float32) {
 		mgl32.SetMin(&p[1], &start[1])
 
 		// Render the count
-		gui.RenderText(p, fmt.Sprint(stack.Count), gui.Anchor{Horizontal: 1, Vertical: -1})
-	}
-}
-
-func GetStacksFromSlots(slots []Slot) (out []core.ItemStack) {
-	for _, v := range slots {
-		out = append(out, v.GetStack())
-	}
-	return
-}
-
-func SetSlotsFromStacks(stacks []core.ItemStack, slots []Slot) {
-	if len(stacks) != len(slots) {
-		panic("slots and stacks must have equal lengths")
-	}
-
-	for k := range slots {
-		slots[k].SetStack(stacks[k])
+		RenderText(p, fmt.Sprint(stack.Count), Anchor{Horizontal: 1, Vertical: -1})
 	}
 }

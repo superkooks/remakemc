@@ -2,7 +2,6 @@ package server
 
 import (
 	"remakemc/core"
-	"remakemc/core/container"
 	"remakemc/core/proto"
 )
 
@@ -32,9 +31,21 @@ func (c *Client) HandleContainerClick(m proto.ContainerClick) {
 	// TODO Update only clients who are looking at this container
 
 	// TODO Add support for non-inventories (proto level)
+	var i core.Container
+	if m.EntityID == c.Position.EntityID {
+		i = c.Inventory
+	} else {
+		Dim.Lock.Lock()
+		for _, v := range Dim.Entities {
+			if v.ID == m.EntityID {
+				i = v.Inventory
+				break
+			}
+		}
+		Dim.Lock.Unlock()
+	}
 
-	i := c.Inventory
-	hovered := i.Slots[m.SlotIndex]
+	hovered := i.GetSlots()[m.SlotIndex]
 
 	if m.LeftClick {
 		if i.GetFloating().IsEmpty() && !hovered.GetStack().IsEmpty() {
@@ -57,7 +68,7 @@ func (c *Client) HandleContainerClick(m proto.ContainerClick) {
 			}
 
 		} else if !i.GetFloating().IsEmpty() {
-			if hovered.GetStack().Item == i.Floating.Item || hovered.GetStack().IsEmpty() {
+			if hovered.GetStack().Item == i.GetFloating().Item || hovered.GetStack().IsEmpty() {
 				// Place one item in the slot
 				m := hovered.PutStack(core.ItemStack{Item: i.GetFloating().Item, Count: 1})
 				if m.IsEmpty() {
@@ -74,7 +85,8 @@ func (c *Client) HandleContainerClick(m proto.ContainerClick) {
 
 	c.SendQueue <- proto.CONTAINER_CONTENTS
 	c.SendQueue <- proto.ContainerContents{
-		Slots:         container.GetStacksFromSlots(i.Slots),
-		FloatingStack: i.Floating,
+		EntityID:      m.EntityID,
+		Slots:         core.GetStacksFromSlots(i.GetSlots()),
+		FloatingStack: i.GetFloating(),
 	}
 }

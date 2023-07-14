@@ -104,8 +104,8 @@ func Start() {
 	player.Yaw = msg.Player.Yaw
 
 	player.Inventory = new(container.Inventory)
-	player.Inventory.Init(true)
-	container.SetSlotsFromStacks(msg.Inventory, player.Inventory.GetSlots())
+	player.Inventory.Init(true, msg.Player.EntityID)
+	core.SetSlotsFromStacks(msg.Inventory, player.Inventory.GetSlots())
 
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
 	renderers.Win.SetScrollCallback(player.ScrollCallback)
@@ -240,7 +240,7 @@ func Start() {
 		}
 
 		// Render gui
-		gui.RenderGame(player.SelectedHotbarSlot, container.GetStacksFromSlots(player.Inventory.GetSlots()[:9]))
+		gui.RenderGame(player.SelectedHotbarSlot, core.GetStacksFromSlots(player.Inventory.GetSlots()[:9]))
 
 		gui.RenderText(
 			mgl32.Vec2{1, 1},
@@ -345,7 +345,7 @@ func Start() {
 
 				case proto.ContainerContents:
 					// TODO Support non-inventories
-					container.SetSlotsFromStacks(msg.Slots, player.Inventory.GetSlots())
+					core.SetSlotsFromStacks(msg.Slots, player.Inventory.GetSlots())
 					player.Inventory.SetFloating(msg.FloatingStack)
 				}
 			default:

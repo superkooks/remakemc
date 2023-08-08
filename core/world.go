@@ -64,7 +64,8 @@ type Dimension struct {
 	// A chunk starts at (0,0,0) and ends at (16,16,16)
 	Chunks map[Vec3]*Chunk
 
-	Entities []*Entity
+	// Entities include everything in the dimension, including chunks, mobs, etc.
+	Entities []Entity
 }
 
 func (d *Dimension) GetChunkContaining(pos Vec3) *Chunk {
@@ -132,16 +133,4 @@ func (d *Dimension) SetBlockAt(b Block) {
 	y := FlooredRemainder(b.Position.Y, 16)
 	z := FlooredRemainder(b.Position.Z, 16)
 	chk.SetBlockAt(NewVec3(x, y, z), b)
-}
-
-type World struct {
-	Dimensions map[string]Dimension
-}
-
-type Tickable interface {
-	DoTick()
-}
-
-type RandomTickable interface {
-	DoRandomTick()
 }

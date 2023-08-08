@@ -13,10 +13,10 @@ type PlayerHeldItem int
 
 // Update the externally visible inventory slots of other entities, such as held items and armor.
 // Sent by the server
-type EntityEquipment struct {
-	core.EntityEquipment
-	EntityID uuid.UUID
-}
+// type EntityEquipment struct {
+// 	core.EntityEquipment
+// 	EntityID uuid.UUID
+// }
 
 // Updates the contents of the currently open screen.
 // May also be sent with by the CONTAINER_OPEN event.

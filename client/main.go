@@ -21,7 +21,6 @@ import (
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/go-gl/mathgl/mgl32"
-	"github.com/google/uuid"
 )
 
 var serverRead chan interface{}
@@ -91,6 +90,7 @@ func Start() {
 		Chunks: make(map[core.Vec3]*core.Chunk),
 	}
 	for _, v := range chunks {
+		// dim.Entities = append(dim.Entities, v)
 		dim.Chunks[v.Position] = v
 	}
 
@@ -102,8 +102,8 @@ func Start() {
 
 	// Initialize player
 	player = NewPlayer(msg.Player.Position, msg.Player.EntityID)
-	player.LookAzimuth = msg.Player.LookAzimuth
-	player.LookElevation = msg.Player.LookElevation
+	player.Azimuth = msg.Player.LookAzimuth
+	player.Elevation = msg.Player.LookElevation
 	player.Yaw = msg.Player.Yaw
 
 	player.Inventory = new(container.Inventory)
@@ -111,11 +111,13 @@ func Start() {
 	core.SetSlotsFromStacks(msg.Inventory, player.Inventory.GetSlots())
 
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
-	renderers.Win.SetScrollCallback(player.ScrollCallback)
+	// renderers.Win.SetScrollCallback(player.ScrollCallback)
+
+	dim.Entities = append(dim.Entities, player)
 
 	// Get all tickers
-	var allTickers []core.Tickable
-	allTickers = append(allTickers, player)
+	// var allTickers []core.Tickable
+	// allTickers = append(allTickers, player)
 
 	gl.DebugMessageCallback(func(
 		source uint32,
@@ -159,26 +161,22 @@ func Start() {
 
 		// Process input and recalculate view matrix
 		if renderers.IsWindowFocused() && !containerOpen {
-			player.ProcessMousePosition(deltaTime)
+			MouseSystem(dim, deltaTime)
 		}
-		player.DoUpdate(deltaTime, dim)
 		view := mgl32.LookAtV(
 			player.CameraPos(),                       // Camera is at ... in World Space
 			player.CameraPos().Add(player.LookDir()), // and looks at
 			mgl32.Vec3{0, 1, 0},                      // Head is up
 		)
 
-		// Update entities
-		for _, v := range dim.Entities {
-			v.DoUpdate(deltaTime, dim)
-		}
+		core.PhysicsSystem(dim, float32(deltaTime))
 
 		// See if we need to do a game tick
 		collectedDelta += deltaTime
 		for ; collectedDelta >= 1.0/20; collectedDelta -= 1.0 / 20 {
-			for _, v := range allTickers {
-				v.DoTick()
-			}
+			// For some reason, this must be in a very specific order, or you can't jump
+			core.PhysicsTickSystem(dim)
+			PlayerSystem(dim)
 		}
 
 		// Mining
@@ -237,8 +235,11 @@ func Start() {
 		})
 
 		// Render all entities
-		for _, v := range dim.Entities {
-			r := core.EntityRegistry[v.EntityType].RenderType
+		for _, v := range core.GetEntitiesSatisfying[interface {
+			core.RenderFace
+			core.Entity
+		}](dim.Entities) {
+			r := v.GetRenderComp()
 			if r != nil {
 				r.RenderEntity(v, view)
 			}
@@ -298,73 +299,73 @@ func Start() {
 					c := dim.Chunks[msg.position]
 					renderers.MakeChunkVAO(c, msg.mesh, msg.normals, msg.uvs, msg.lightLevels)
 
-				case proto.EntityCreate:
-					e := &core.Entity{
-						ID:            msg.EntityID,
-						Position:      msg.Position,
-						AABB:          msg.AABB,
-						EntityType:    msg.EntityType,
-						Yaw:           msg.Yaw,
-						Pitch:         msg.Pitch,
-						LookAzimuth:   msg.LookAzimuth,
-						LookElevation: msg.LookElevation,
-					}
-					typ := core.EntityRegistry[msg.EntityType]
-					e.IsBlock = typ.IsBlock
+					// case proto.EntityCreate:
+					// 	e := &core.Entity{
+					// 		ID:            msg.EntityID,
+					// 		Position:      msg.Position,
+					// 		AABB:          msg.AABB,
+					// 		EntityType:    msg.EntityType,
+					// 		Yaw:           msg.Yaw,
+					// 		Pitch:         msg.Pitch,
+					// 		LookAzimuth:   msg.LookAzimuth,
+					// 		LookElevation: msg.LookElevation,
+					// 	}
+					// 	typ := core.EntityRegistry[msg.EntityType]
+					// 	e.IsBlock = typ.IsBlock
 
-					if !e.IsBlock {
-						e.Lerp = true
-						e.NewLerp(msg.Position)
-					}
-					dim.Entities = append(dim.Entities, e)
+					// 	if !e.IsBlock {
+					// 		e.Lerp = true
+					// 		e.NewLerp(msg.Position)
+					// 	}
+					// 	dim.Entities = append(dim.Entities, e)
 
-				case proto.EntityDelete:
-					for k, v := range dim.Entities {
-						if v.ID == uuid.UUID(msg) {
-							dim.Entities = append(dim.Entities[:k], dim.Entities[k+1:]...)
-							break
-						}
-					}
+					// case proto.EntityDelete:
+					// 	for k, v := range dim.Entities {
+					// 		if v.ID == uuid.UUID(msg) {
+					// 			dim.Entities = append(dim.Entities[:k], dim.Entities[k+1:]...)
+					// 			break
+					// 		}
+					// 	}
 
-				case proto.EntityPosition:
-					if msg.EntityID == player.ID {
-						// Update the player's position absolutely.
-						// Only happens when server thinks divergence is too high.
-						// Will cause a rubberband
-						player.Position = msg.Position
-					} else {
-						// Find the entity by ID
-						for _, v := range dim.Entities {
-							if v.ID == msg.EntityID {
-								// Update
-								v.LookAzimuth = msg.LookAzimuth
-								v.LookElevation = msg.LookElevation
-								v.Position = msg.Position
-								v.Yaw = msg.Yaw
+					// case proto.EntityPosition:
+					// 	if msg.EntityID == player.ID {
+					// 		// Update the player's position absolutely.
+					// 		// Only happens when server thinks divergence is too high.
+					// 		// Will cause a rubberband
+					// 		player.Position = msg.Position
+					// 	} else {
+					// 		// Find the entity by ID
+					// 		for _, v := range dim.Entities {
+					// 			if v.ID == msg.EntityID {
+					// 				// Update
+					// 				v.LookAzimuth = msg.LookAzimuth
+					// 				v.LookElevation = msg.LookElevation
+					// 				v.Position = msg.Position
+					// 				v.Yaw = msg.Yaw
 
-								v.NewLerp(msg.Position)
-							}
-						}
-					}
+					// 				v.NewLerp(msg.Position)
+					// 			}
+					// 		}
+					// 	}
 
-				case proto.BlockUpdate:
-					dim.Lock.Lock()
+					// case proto.BlockUpdate:
+					// 	dim.Lock.Lock()
 
-					dim.SetBlockAt(core.Block{
-						Position: msg.Position,
-						Type:     core.BlockRegistry[msg.BlockType],
-					})
-					renderers.UpdateRequiredMeshes(dim, msg.Position)
+					// 	dim.SetBlockAt(core.Block{
+					// 		Position: msg.Position,
+					// 		Type:     core.BlockRegistry[msg.BlockType],
+					// 	})
+					// 	renderers.UpdateRequiredMeshes(dim, msg.Position)
 
-					dim.Lock.Unlock()
+					// 	dim.Lock.Unlock()
 
-				case proto.EntityEquipment:
-					fmt.Println(msg.HeldItemType)
+					// case proto.EntityEquipment:
+					// 	fmt.Println(msg.HeldItemType)
 
-				case proto.ContainerContents:
-					// TODO Support non-inventories
-					core.SetSlotsFromStacks(msg.Slots, player.Inventory.GetSlots())
-					player.Inventory.SetFloating(msg.FloatingStack)
+					// case proto.ContainerContents:
+					// 	// TODO Support non-inventories
+					// 	core.SetSlotsFromStacks(msg.Slots, player.Inventory.GetSlots())
+					// 	player.Inventory.SetFloating(msg.FloatingStack)
 				}
 			default:
 				break outer

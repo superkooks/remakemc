@@ -76,50 +76,50 @@ func (c *Client) Listen() {
 				fmt.Println(c.Username, "stopped sprinting")
 			}
 
-		case proto.PLAYER_POSITION:
-			var p proto.PlayerPosition
-			err := d.Decode(&p)
-			if err != nil {
-				panic(err)
-			}
+		// case proto.PLAYER_POSITION:
+		// 	var p proto.PlayerPosition
+		// 	err := d.Decode(&p)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
 
-			c.HandlePlayerPosition(p)
+		// 	c.HandlePlayerPosition(p)
 
-		case proto.BLOCK_DIG:
-			var b proto.BlockDig
-			err := d.Decode(&b)
-			if err != nil {
-				panic(err)
-			}
+		// case proto.BLOCK_DIG:
+		// 	var b proto.BlockDig
+		// 	err := d.Decode(&b)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
 
-			c.HandleBlockDig(b)
+		// 	c.HandleBlockDig(b)
 
-		case proto.BLOCK_INTERACTION:
-			var b proto.BlockInteraction
-			err := d.Decode(&b)
-			if err != nil {
-				panic(err)
-			}
+		// case proto.BLOCK_INTERACTION:
+		// 	var b proto.BlockInteraction
+		// 	err := d.Decode(&b)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
 
-			c.HandleBlockInteraction(b)
+		// 	c.HandleBlockInteraction(b)
 
-		case proto.PLAYER_HELD_ITEM:
-			var h proto.PlayerHeldItem
-			err := d.Decode(&h)
-			if err != nil {
-				panic(err)
-			}
+		// case proto.PLAYER_HELD_ITEM:
+		// 	var h proto.PlayerHeldItem
+		// 	err := d.Decode(&h)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
 
-			c.HandlePlayerHeldItem(h)
+		// 	c.HandlePlayerHeldItem(h)
 
-		case proto.CONTAINER_CLICK:
-			var m proto.ContainerClick
-			err := d.Decode(&m)
-			if err != nil {
-				panic(err)
-			}
+		// case proto.CONTAINER_CLICK:
+		// 	var m proto.ContainerClick
+		// 	err := d.Decode(&m)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
 
-			c.HandleContainerClick(m)
+		// 	c.HandleContainerClick(m)
 
 		default:
 			fmt.Println("unrecognized message from client, disconnecting them")

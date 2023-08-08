@@ -21,8 +21,8 @@ func initEntity() {
 	}
 
 	for _, v := range core.EntityRegistry {
-		if v.RenderType != nil {
-			v.RenderType.Init()
+		if r, ok := v.(core.RenderFace); ok {
+			r.RenderInit()
 		}
 	}
 }
@@ -54,7 +54,7 @@ func (d *TestEntityRenderer) Init() {
 	gl.VertexAttribPointer(1, 3, gl.FLOAT, false, 0, nil) // vec3
 }
 
-func (d *TestEntityRenderer) RenderEntity(e *core.Entity, view mgl32.Mat4) {
+func (d *TestEntityRenderer) RenderEntity(e core.Entity, view mgl32.Mat4) {
 	gl.UseProgram(d.shader.Program)
 	gl.Enable(gl.DEPTH_TEST)
 	gl.DepthFunc(gl.LEQUAL)
@@ -65,7 +65,8 @@ func (d *TestEntityRenderer) RenderEntity(e *core.Entity, view mgl32.Mat4) {
 	gl.UniformMatrix4fv(d.shader.Uniforms["view"], 1, false, &view[0])
 
 	// Translate entity into position
-	model := mgl32.Translate3D(e.Position[0], e.Position[1], e.Position[2])
+	pos := e.(core.PositionFace).GetPosition()
+	model := mgl32.Translate3D(pos[0], pos[1], pos[2])
 	gl.UniformMatrix4fv(d.shader.Uniforms["model"], 1, false, &model[0])
 
 	// Draw

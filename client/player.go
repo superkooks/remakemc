@@ -13,7 +13,10 @@ import (
 )
 
 type Player struct {
-	core.Entity
+	core.EntityBase
+	core.PositionComp
+	core.PhysicsComp
+	core.LookComp
 
 	Sprinting bool
 	Sneaking  bool
@@ -26,12 +29,23 @@ type Player struct {
 }
 
 func NewPlayer(position mgl32.Vec3, entityID uuid.UUID) *Player {
-	p := &Player{Speed: 1, Entity: core.Entity{
-		ID:       entityID,
-		Position: position,
-		AABB:     mgl32.Vec3{0.6, 1.8, 0.6}},
+	p := &Player{
+		Speed: 1,
+		EntityBase: core.EntityBase{
+			ID: entityID,
+		},
+		PhysicsComp: core.PhysicsComp{
+			AABB: mgl32.Vec3{0.6, 1.8, 0.6},
+		},
+		PositionComp: core.PositionComp{
+			Position: position,
+		},
 	}
 	return p
+}
+
+func (p *Player) GetTypeName() string {
+	return "mc:local_player"
 }
 
 // The position of the camera
@@ -46,9 +60,9 @@ func (p *Player) CameraPos() mgl32.Vec3 {
 // The direction the player is looking
 func (p *Player) LookDir() mgl32.Vec3 {
 	return mgl32.Vec3{
-		float32(math.Cos(p.LookElevation) * math.Sin(p.LookAzimuth)),
-		float32(math.Sin(p.LookElevation)),
-		float32(math.Cos(p.LookElevation) * math.Cos(p.LookAzimuth)),
+		float32(math.Cos(p.Elevation) * math.Sin(p.Azimuth)),
+		float32(math.Sin(p.Elevation)),
+		float32(math.Cos(p.Elevation) * math.Cos(p.Azimuth)),
 	}
 }
 
@@ -59,9 +73,9 @@ func (p *Player) ForwardVec() mgl32.Vec3 {
 
 func (p *Player) RightVec() mgl32.Vec3 {
 	return mgl32.Vec3{
-		float32(math.Sin(p.LookAzimuth - math.Pi/2.0)),
+		float32(math.Sin(p.Azimuth - math.Pi/2.0)),
 		0,
-		float32(math.Cos(p.LookAzimuth - math.Pi/2.0)),
+		float32(math.Cos(p.Azimuth - math.Pi/2.0)),
 	}
 }
 
@@ -77,9 +91,10 @@ func (p *Player) SetSneaking(b bool) {
 var inventoryButton = new(core.Debounced)
 var escButton = new(core.Debounced)
 
-// Process the keyboard input and physics for this frame
-func (p *Player) DoTick() {
-	p.Entity.DoTick()
+// Process the keyboard input and physics for this tick
+func PlayerSystem(dim *core.Dimension) {
+	// Get player
+	p := core.GetEntitiesSatisfying[*Player](dim.Entities)[0]
 
 	// Inventory mode
 	if containerOpen {
@@ -204,7 +219,7 @@ func (p *Player) DoTick() {
 	}
 
 	groundAccel := float32(moveMult*p.Speed*math.Pow(0.6/slipperiness, 3)) * 0.1 * 20
-	direction := p.LookAzimuth
+	direction := p.Azimuth
 	if moveMult != 0 {
 		if walkVec.X() == 0 {
 			if walkVec.Y() < 0 {
@@ -228,8 +243,8 @@ func (p *Player) DoTick() {
 		p.Velocity[2] += groundAccel * float32(math.Cos(direction))
 
 		if p.Sprinting {
-			p.Velocity[0] += 0.2 * float32(math.Sin(p.LookAzimuth)) * 20 * 0.91 * 0.6
-			p.Velocity[2] += 0.2 * float32(math.Cos(p.LookAzimuth)) * 20 * 0.91 * 0.6
+			p.Velocity[0] += 0.2 * float32(math.Sin(p.Azimuth)) * 20 * 0.91 * 0.6
+			p.Velocity[2] += 0.2 * float32(math.Cos(p.Azimuth)) * 20 * 0.91 * 0.6
 		}
 
 	} else if p.OnGround() {
@@ -241,27 +256,30 @@ func (p *Player) DoTick() {
 		p.Velocity[2] += 0.02 * float32(moveMult*math.Cos(direction)*20)
 	}
 
-	serverWrite <- proto.PLAYER_POSITION
-	serverWrite <- proto.PlayerPosition{
-		Position:      p.Position,
-		Yaw:           p.Yaw,
-		LookAzimuth:   p.LookAzimuth,
-		LookElevation: p.LookElevation,
-	}
+	// serverWrite <- proto.PLAYER_POSITION
+	// serverWrite <- proto.PlayerPosition{
+	// 	Position:      p.Position,
+	// 	Yaw:           p.Yaw,
+	// 	LookAzimuth:   p.Azimuth,
+	// 	LookElevation: p.Elevation,
+	// }
 }
 
-func (p *Player) ScrollCallback(_ *glfw.Window, _, yoff float64) {
-	if yoff < 0 && p.SelectedHotbarSlot < 8 {
-		p.SelectedHotbarSlot++
-	} else if yoff > 0 && p.SelectedHotbarSlot > 0 {
-		p.SelectedHotbarSlot--
-	}
-	serverWrite <- proto.PLAYER_HELD_ITEM
-	serverWrite <- p.SelectedHotbarSlot
-}
+// func (p *Player) ScrollCallback(_ *glfw.Window, _, yoff float64) {
+// 	if yoff < 0 && p.SelectedHotbarSlot < 8 {
+// 		p.SelectedHotbarSlot++
+// 	} else if yoff > 0 && p.SelectedHotbarSlot > 0 {
+// 		p.SelectedHotbarSlot--
+// 	}
+// 	serverWrite <- proto.PLAYER_HELD_ITEM
+// 	serverWrite <- p.SelectedHotbarSlot
+// }
 
 // Process the mouse input for this frame
-func (p *Player) ProcessMousePosition(deltaT float64) {
+func MouseSystem(dim *core.Dimension, deltaT float64) {
+	// Get player
+	p := core.GetEntitiesSatisfying[*Player](dim.Entities)[0]
+
 	// Get and reset cursor position
 	xpos, ypos := renderers.Win.GetCursorPos()
 
@@ -274,13 +292,13 @@ func (p *Player) ProcessMousePosition(deltaT float64) {
 	renderers.Win.SetCursorPos(float64(width)/2, float64(height)/2)
 
 	// Calculate new orientation
-	p.LookAzimuth += 0.001 * (float64(width)/2 - float64(xpos))
-	p.LookElevation += 0.001 * (float64(height)/2 - float64(ypos))
+	p.Azimuth += 0.001 * (float64(width)/2 - float64(xpos))
+	p.Elevation += 0.001 * (float64(height)/2 - float64(ypos))
 
 	// You can't look further than up or down
-	if p.LookElevation < -math.Pi/2 {
-		p.LookElevation = -math.Pi/2 + 0.0001 // prevent singularity
-	} else if p.LookElevation > math.Pi/2 {
-		p.LookElevation = math.Pi/2 - 0.0001
+	if p.Elevation < -math.Pi/2 {
+		p.Elevation = -math.Pi/2 + 0.0001 // prevent singularity
+	} else if p.Elevation > math.Pi/2 {
+		p.Elevation = math.Pi/2 - 0.0001
 	}
 }

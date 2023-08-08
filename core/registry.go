@@ -4,7 +4,7 @@ var BlockRegistry = map[string]*BlockType{
 	"": nil,
 }
 
-var EntityRegistry = map[string]*EntityType{}
+var EntityRegistry = map[string]Entity{}
 
 var ItemRegistry = map[string]*ItemType{}
 
@@ -13,8 +13,8 @@ func AddBlockToRegistry(b *BlockType) *BlockType {
 	return b
 }
 
-func AddEntityToRegistry(e *EntityType) *EntityType {
-	EntityRegistry[e.Name] = e
+func AddEntityToRegistry(e Entity) Entity {
+	EntityRegistry[e.GetTypeName()] = e
 	return e
 }
 

@@ -77,13 +77,13 @@ func readFromNet(serverRead chan interface{}) {
 			}
 			serverRead <- data
 
-		case proto.ENTITY_EQUIPMENT:
-			var data proto.EntityEquipment
-			err = d.Decode(&data)
-			if err != nil {
-				panic(err)
-			}
-			serverRead <- data
+		// case proto.ENTITY_EQUIPMENT:
+		// 	var data proto.EntityEquipment
+		// 	err = d.Decode(&data)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
+		// 	serverRead <- data
 
 		case proto.CONTAINER_CONTENTS:
 			var data proto.ContainerContents

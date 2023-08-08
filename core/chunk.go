@@ -2,6 +2,8 @@ package core
 
 // A Chunk is a 16x16x16 group of blocks
 type Chunk struct {
+	EntityBase
+
 	Position Vec3
 
 	// Render data

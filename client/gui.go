@@ -13,13 +13,13 @@ var openContainer core.Container
 func OpenContainer(c core.Container) {
 	containerOpen = true
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorNormal)
-	renderers.Win.SetScrollCallback(nil)
+	// renderers.Win.SetScrollCallback(nil)
 	openContainer = c
 }
 
 func CloseContainer() {
 	containerOpen = false
 	renderers.Win.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
-	renderers.Win.SetScrollCallback(player.ScrollCallback)
+	// renderers.Win.SetScrollCallback(player.ScrollCallback)
 	openContainer = nil
 }
